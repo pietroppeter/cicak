@@ -1,7 +1,10 @@
 # atlas dependencies (recreate with `atlas install`)
 deps/
-# nimib output
-docs/*.html
+nimcache/
+# rendered dev log
+/docs/**/*.html
+/docs/**/*.png
+/specview.html
 # experiment build artifacts
 experiments/hcr-cells/host
 experiments/hcr-cells/host.next

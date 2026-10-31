@@ -1,0 +1,25 @@
+schema: spec-driven
+
+context: |
+  A REPL for Nim. Research and the first proof of concept are dev-log posts in docs/blog
+  (nimib); experiments live in experiments/. The planned design: each input becomes a
+  Nim module, a long-running host loads it with hot code reloading (HCR), and
+  incremental compilation (`nim ic`) keeps each step cheap. It should be a library plus
+  a server (JSON-RPC over stdio) that several front ends can use, not part of nimlang.
+  Targets Nim >= 2.4 built from source (the 2.4.0 release binaries lack nifler, which
+  `nim ic` needs). Dependencies are managed with atlas, not nimble. Linux x64 first.
+  The project name is not final and the repo may be renamed: keep the name in
+  docs/theme.nim's constants and avoid spreading it.
+  Ideas that are not yet a change live in BACKLOG.md at the repo root.
+
+rules:
+  proposal:
+    - If the change comes from a BACKLOG.md entry, name that entry, and mark it in
+      BACKLOG.md as in progress with the change name
+    - Say how the change will be shown in the dev log (a new post, or none and why)
+
+operations:
+  archive:
+    guidance:
+      - Remove the change's entry from BACKLOG.md, if it has one
+      - Add a line for the change to CHANGELOG.md under Unreleased (Added, Changed or Fixed), with the PR number

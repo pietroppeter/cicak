@@ -1,20 +1,25 @@
 import nimib
-import std/[osproc, strutils]
+import std/[os, osproc, strutils]
+import ../theme
 
 nbInit
 nb.title = "PoC: cells as modules with hot code reloading"
+nb.doc.filename = nb.doc.filename.parentDir / "2026-10-31-hcr-poc.html"
+nb.useTheme(
+  titleHtml = "Cells as modules with <em>hot code reloading</em>",
+  eyebrow = "dev log · 31 October 2026",
+  epigraph = "A running Nim process receives new cells without restarting, and earlier state survives.",
+  meta = "proof of concept · Nim 2.4.0 built from source, gcc, Linux · rendered with nimib",
+  summary = "First proof of concept: new cell modules are loaded into a running process with hot code reloading, and earlier globals keep their values.",
+)
 
 nbText: """
-# PoC: cells as modules with hot code reloading
-
-_First proof of concept for nim-repl, 2026-10-31. Nim 2.4.0 built from source, gcc, Linux._
-
 **Result:** a running Nim process can receive new "cells" (small Nim modules) without restarting.
 Each new cell runs its top-level code once, can use everything earlier cells defined,
 and the values of earlier variables survive. Adding a cell costs about 1 s of compilation with `nim c`,
 and about 0.4 s with incremental compilation (`nim ic`), measured separately.
 
-This is the core mechanism of the REPL design in [the research document](https://github.com/pietroppeter/nim-repl/blob/main/docs/research.nim):
+This is the core mechanism of the REPL design in [the research post](2026-10-31-research.html):
 each REPL input becomes a module, and the long-running process is the session.
 It is a mechanism test, not a REPL yet: the cells are written by hand and there is no prompt.
 

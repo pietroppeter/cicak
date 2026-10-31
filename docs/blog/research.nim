@@ -1,19 +1,26 @@
 import nimib
-import diagram
+import std/os
+import ../theme
+import ../diagram
 
 nbInit
-nb.title = "Nim REPL and reactive notebook: research findings"
+nb.title = "How could a Nim REPL work?"
+# dated slug for the dev log
+nb.doc.filename = nb.doc.filename.parentDir / "2026-10-31-research.html"
+nb.useTheme(
+  titleHtml = "How could a Nim <em>REPL</em> work?",
+  eyebrow = "dev log · 31 October 2026",
+  epigraph = "Prior art, a design where each input is a module, a service any front end can use, and a marimo-style notebook.",
+  meta = "research · rendered with nimib",
+  summary = "Research: prior art for Nim REPLs, the cells-as-modules design, a library and service architecture, and a reactive notebook.",
+)
 
 nbText: """
-# Nim REPL and reactive notebook: research findings
-
-_Research notes, started 2026-10-31._
-
 ## Summary
 
 A usable Nim REPL is within reach by treating each input as a Nim module, loaded into a long-running process
 with hot code reloading (HCR), with incremental compilation (IC, Nim 2.4) keeping each compile cheap.
-This is the direction Araq suggested, and both pieces work on Nim 2.4.0 in a quick test (see [What I measured](#what-i-measured)).
+This is the direction Araq suggested, and both pieces work on Nim 2.4.0 in a quick test (see What I measured below).
 
 - Today's tools (INim, jupyternim) re-run the whole session on every input: about 0.75 s per input even with a warm cache, and side effects run again each time.
 - `nim secret` answers instantly but runs in the compiler VM, which cannot call C code.
@@ -59,7 +66,7 @@ the 2.4.0 packaging bug is in [thread 14255](https://forum.nim-lang.org/t/14255)
   and `std/os` procs like `getCurrentDir` are missing.
 - **Re-run cost**: recompiling and running a small edited file with `nim c -r` takes about 0.75 s with a warm cache
   and 20 s cold. That is the minimum wait per input for INim's approach.
-- **HCR**: the [cells test](https://github.com/pietroppeter/nim-repl/tree/main/experiments/hcr-cells)
+- **HCR**: the [cells test](2026-10-31-hcr-poc.html)
   crashes at startup (the main module never initialises its HCR function pointers), with orc or refc, threads on or off.
 
 **Nim 2.4.0** built from source (the `version-2-4` branch still equals the `v2.4.0` tag on 2026-10-31), gcc, Linux:

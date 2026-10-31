@@ -1,3 +1,6 @@
+# nimib configuration for the dev log: docs/ is both the source root and the site
+# root, so the code in posts runs from docs/ and paths are site paths, which work
+# locally and on GitHub Pages.
 [nimib]
 srcDir = "docs"
 homeDir = "docs"
