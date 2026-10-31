@@ -1,0 +1,9 @@
+# atlas dependencies (recreate with `atlas install`)
+deps/
+# nimib output
+docs/*.html
+# experiment build artifacts
+experiments/hcr-cells/host
+experiments/hcr-cells/host.next
+experiments/hcr-cells/*.so
+experiments/hcr-cells/go
