@@ -3,7 +3,7 @@ A Read-Eval-Print-Loop for Nim
 
 AI disclosure: this project is mostly vibed. Currently [level 7](https://www.visidata.org/blog/2026/ai/#level-6%3A-bots-coded%2C-human-understands-mostly) on visidata AI scale: Human specced, bots coded.
 
-Status: research. Nothing to install yet. The findings so far are in [docs/research.nim](docs/research.nim), a [nimib](https://github.com/pietroppeter/nimib) document.
+Status: research. Nothing to install yet. The findings so far are in [docs/research.nim](docs/research.nim), and the first proof of concept is written up in [docs/poc.nim](docs/poc.nim). Both are [nimib](https://github.com/pietroppeter/nimib) documents.
 The short version is that each input becomes a Nim module, a long-running process loads it with hot code reloading, and incremental compilation (`nim ic`) keeps each step cheap.
 
 ## Setup
@@ -24,10 +24,11 @@ Dependencies are managed with [atlas](https://github.com/nim-lang/atlas):
 atlas install
 ```
 
-## Building the research document
+## Building the documents
 
 ```sh
 nim r docs/research.nim   # writes docs/research.html
+nim r docs/poc.nim        # runs both experiments and writes docs/poc.html with their output
 ```
 
 nimib's markdown dependency uses `std/re`, so `libpcre.so.3` must be installed (on Debian/Ubuntu: `apt install libpcre3`).
