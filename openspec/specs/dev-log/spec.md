@@ -8,8 +8,8 @@ Pages.
 ## Requirements
 
 ### Requirement: Index of posts
-The site root SHALL be an index page listing every rendered post in `docs/blog`, newest
-first, each with its date, title, one-line summary and a link to the post. Adding a post
+The site root SHALL be an index page with a table of every rendered post in `docs/blog`,
+newest first, one row per post with its date, title (linking to the post) and one-line summary. Adding a post
 SHALL NOT require editing the index.
 
 #### Scenario: New post
@@ -19,6 +19,14 @@ SHALL NOT require editing the index.
 #### Scenario: Post without a summary
 - **WHEN** a post does not set a summary
 - **THEN** the index still lists it, with date and title only
+
+### Requirement: Navigation
+Every page SHALL link to the GitHub repository at the top, and every post SHALL link
+back to the index.
+
+#### Scenario: Reader on a post
+- **WHEN** a reader opens a post from a search result
+- **THEN** the top of the page links to the dev log index and to the repository
 
 ### Requirement: Dated post files
 Each post SHALL render to a file in `docs/blog` named `YYYY-MM-DD-<slug>.html`, and its
