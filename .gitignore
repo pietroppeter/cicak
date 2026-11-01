@@ -1,0 +1,12 @@
+# atlas dependencies (recreate with `atlas install`)
+deps/
+nimcache/
+# rendered dev log
+/docs/**/*.html
+/docs/**/*.png
+/specview.html
+# experiment build artifacts
+experiments/hcr-cells/host
+experiments/hcr-cells/host.next
+experiments/hcr-cells/*.so
+experiments/hcr-cells/go

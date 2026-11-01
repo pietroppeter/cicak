@@ -1,0 +1,93 @@
+name: CI
+
+# Commits that only touch prose (README, BACKLOG, LICENSE, ...) or OpenSpec
+# planning files (openspec/, .claude/) don't run CI. docs/ does, to rebuild the dev log.
+# paths-ignore cannot re-include a path, so this uses paths with negations: the last
+# pattern that matches a file wins.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "**"
+      - "!**.md"
+      - "!LICENSE"
+      - "!.gitignore"
+      - "!openspec/**"
+      - "!.claude/**"
+      - "!tools/specview.nim"
+      - "!.github/workflows/openspec.yml"
+  pull_request:
+    paths:
+      - "**"
+      - "!**.md"
+      - "!LICENSE"
+      - "!.gitignore"
+      - "!openspec/**"
+      - "!.claude/**"
+      - "!tools/specview.nim"
+      - "!.github/workflows/openspec.yml"
+  workflow_dispatch:
+
+env:
+  NIM_BRANCH: version-2-4
+  NIM_DIR: ${{ github.workspace }}/../nim
+
+jobs:
+  # Nim 2.4 is built from source: the 2.4.0 release binaries lack nifler, which
+  # `nim ic` needs. The build (a few minutes) is cached by the branch's commit.
+  docs:
+    runs-on: ubuntu-24.04  # still ships libpcre3, which nimib's markdown renderer needs
+    steps:
+      - uses: actions/checkout@v4
+      - id: nim-sha
+        run: echo "sha=$(git ls-remote https://github.com/nim-lang/Nim refs/heads/$NIM_BRANCH | cut -f1)" >> "$GITHUB_OUTPUT"
+      - id: nim-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.NIM_DIR }}
+          key: nim-${{ runner.os }}-${{ runner.arch }}-${{ steps.nim-sha.outputs.sha }}
+      - name: Build Nim, nifler, nifmake and atlas
+        if: steps.nim-cache.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 -b "$NIM_BRANCH" https://github.com/nim-lang/Nim "$NIM_DIR"
+          cd "$NIM_DIR"
+          . config/build_config.txt
+          git clone -q "$nim_csourcesUrl" "$nim_csourcesDir"
+          git -C "$nim_csourcesDir" checkout -q "$nim_csourcesHash"
+          make -C "$nim_csourcesDir" -j"$(nproc)"
+          ./bin/nim c --hints:off --skipUserCfg --skipParentCfg koch
+          ./koch boot -d:release --skipUserCfg --skipParentCfg
+          ./koch atlas --skipUserCfg --skipParentCfg
+          rm -rf "$nim_csourcesDir"
+      - run: echo "$NIM_DIR/bin" >> "$GITHUB_PATH"
+      - run: nim -v && ls "$NIM_DIR/bin"
+      - run: sudo apt-get update && sudo apt-get install -y libpcre3
+      - run: atlas install
+      # renders the posts in docs/blog (running the experiments), then the index
+      - name: Render the dev log
+        run: nim docs
+      - name: Assemble site
+        run: |
+          mkdir -p _site/blog
+          cp docs/blog/*.html _site/blog/
+          cp docs/index.html _site/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy-docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: docs
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
