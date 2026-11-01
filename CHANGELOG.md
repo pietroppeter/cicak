@@ -10,6 +10,9 @@ OpenSpec change is archived. Format based on
 - Project setup: atlas, Nim 2.4, OpenSpec, a nimib dev log with the research post and
   the hot code reloading proof of concept, experiments `hcr-cells` and `ic-chain` (#1)
 - Dev log post on cicak, the name of the REPL, with range maps and a video
+- Benchmark (`bench/`): four scenarios of cells in every mode (`nim c`/`nim ic`, re-run
+  or hot reload) and build mode, with compile time split into Nim, C compile and link,
+  a design doc and a results page with nim-plotly charts; not run on CI
 
 ### Changed
 - The project is now called cicak: repository, nimble package, README and dev log
