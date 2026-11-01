@@ -65,6 +65,13 @@ proc nimLibDir(nimExe: string): string =
   try: exe = expandFilename(exe) except OSError: discard
   result = exe.parentDir.parentDir / "lib"
 
+proc memTotal(): string =
+  if fileExists("/proc/meminfo"):
+    for line in lines("/proc/meminfo"):
+      if line.startsWith("MemTotal:"):
+        return $(parseInt(line.splitWhitespace[1]) div (1024 * 1024)) & " GB"
+  cmdOut("sysctl -n hw.memsize")
+
 proc machine(): JsonNode =
   var cpu = ""
   if fileExists("/proc/cpuinfo"):
@@ -73,7 +80,7 @@ proc machine(): JsonNode =
         cpu = line.split(':', 1)[1].strip; break
   if cpu == "": cpu = cmdOut("sysctl -n machdep.cpu.brand_string")
   %*{"cpu": cpu, "cores": countProcessors(), "os": cmdOut("uname -srm"),
-     "memory": cmdOut("sh -c \"free -h | awk '/Mem:/{print $2}'\""),
+     "memory": memTotal(),
      "hostname": cmdOut("hostname")}
 
 proc main() =
