@@ -28,17 +28,24 @@ on:
       - "!.github/workflows/openspec.yml"
   workflow_dispatch:
 
+# A new push to a PR cancels that PR's run still in progress; runs on main always finish.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   NIM_BRANCH: version-2-4
-  NIM_DIR: ${{ github.workspace }}/../nim
 
 jobs:
   # Nim 2.4 is built from source: the 2.4.0 release binaries lack nifler, which
   # `nim ic` needs. The build (a few minutes) is cached by the branch's commit.
   docs:
     runs-on: ubuntu-24.04  # still ships libpcre3, which nimib's markdown renderer needs
+    timeout-minutes: 30  # a cold Nim build takes about 7
     steps:
       - uses: actions/checkout@v4
+      # actions/cache rejects paths with `..`, so Nim lives in the home directory
+      - run: echo "NIM_DIR=$HOME/nim" >> "$GITHUB_ENV"
       - id: nim-sha
         run: echo "sha=$(git ls-remote https://github.com/nim-lang/Nim refs/heads/$NIM_BRANCH | cut -f1)" >> "$GITHUB_OUTPUT"
       - id: nim-cache
@@ -61,10 +68,12 @@ jobs:
           rm -rf "$nim_csourcesDir"
       - run: echo "$NIM_DIR/bin" >> "$GITHUB_PATH"
       - run: nim -v && ls "$NIM_DIR/bin"
-      - run: sudo apt-get update && sudo apt-get install -y libpcre3
+      # usually preinstalled on the image; apt-get only runs when it isn't
+      - run: dpkg -s libpcre3 > /dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libpcre3)
       - run: atlas install
       # renders the posts in docs/blog (running the experiments), then the index
       - name: Render the dev log
+        timeout-minutes: 10
         run: nim docs
       - name: Assemble site
         run: |

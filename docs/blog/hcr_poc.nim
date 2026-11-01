@@ -3,15 +3,23 @@ import std/[os, osproc, strutils]
 import ../theme
 
 nbInit
-nb.title = "PoC: cells as modules with hot code reloading"
+nb.title = "A working PoC with Hot Code Reloading and Incremental Compilation"
 nb.doc.filename = nb.doc.filename.parentDir / "2026-10-31-hcr-poc.html"
 nb.useTheme(
-  titleHtml = "Cells as modules with <em>hot code reloading</em>",
+  titleHtml = "A working PoC with <em>Hot Code Reloading</em> and <em>Incremental Compilation</em>",
   eyebrow = "dev log · 31 October 2026",
   epigraph = "A running Nim process receives new cells without restarting, and earlier state survives.",
   meta = "proof of concept · Nim 2.4.0 built from source, gcc, Linux · rendered with nimib",
-  summary = "First proof of concept: new cell modules are loaded into a running process with hot code reloading, and earlier globals keep their values.",
+  summary = "First proof of concept: new cell modules are loaded into a running process with hot code reloading, earlier globals keep their values, and incremental compilation makes adding a cell cheap.",
 )
+
+# Runs an experiment and returns its output. A failing experiment fails the build,
+# so the page never shows stale or broken results. Not shown on the page.
+proc runExperiment(path: string): string =
+  let (output, exitCode) = execCmdEx("nim r --hints:off --warnings:off " & path)
+  if exitCode != 0:
+    raise newException(OSError, path & " failed with exit code " & $exitCode & ":\n" & output)
+  output.strip
 
 nbText: """
 **Result:** a running Nim process can receive new "cells" (small Nim modules) without restarting.
@@ -19,8 +27,8 @@ Each new cell runs its top-level code once, can use everything earlier cells def
 and the values of earlier variables survive. Adding a cell costs about 1 s of compilation with `nim c`,
 and about 0.4 s with incremental compilation (`nim ic`), measured separately.
 
-This is the core mechanism of the REPL design in [the research post](2026-10-31-research.html):
-each REPL input becomes a module, and the long-running process is the session.
+This answers the question of the previous post, [How could a Nim REPL work?](2026-10-31-research.html),
+by testing its core mechanism: each REPL input becomes a module, and the long-running process is the session.
 It is a mechanism test, not a REPL yet: the cells are written by hand and there is no prompt.
 
 ## The pieces
@@ -34,7 +42,7 @@ nbFile "../experiments/hcr-cells/main.nim"
 
 nbText: """
 `main` imports `cells`, a module whose only job is to import every cell so far.
-At the start it imports just `c1`; the script rewrites it to `import c1, c2` and then `import c1, c2, c3`.
+At the start it imports just `c1`; the run script rewrites it to `import c1, c2` and then `import c1, c2, c3`.
 This is the file a REPL would regenerate after each input.
 
 The cells are ordinary modules. Their exported (`*`) symbols are what later cells can see,
@@ -50,22 +58,22 @@ nbText: """
 
 ## Running it
 
-[`run.sh`](https://github.com/pietroppeter/cicak/blob/main/experiments/hcr-cells/run.sh)
+[`run.nim`](https://github.com/pietroppeter/cicak/blob/main/experiments/hcr-cells/run.nim),
+a small Nim program run with `nim r`,
 builds the two runtime libraries HCR needs (`libnimrtl.so` and `libnimhcr.so`),
 compiles the host with only `c1`, and starts it in the background.
-Then it adds `c2`, recompiles, and touches `go`; then the same for `c3`.
+Then it adds `c2`, recompiles, and creates `go`; then the same for `c3`.
+It fails if any step fails, or if the host has not finished 30 s after the last reload.
 """
 
-nbFile "../experiments/hcr-cells/run.sh"
+nbFile "../experiments/hcr-cells/run.nim"
 
 nbText: """
-The output below was captured when this page was built, by running the script above.
+The output below was captured when this page was built, by running the program above.
 """
 
 nbCode:
-  let (output, exitCode) = execCmdEx("sh ../experiments/hcr-cells/run.sh")
-  echo output.strip
-  echo "exit code: ", exitCode
+  echo runExperiment("../experiments/hcr-cells/run.nim")
 
 nbText: """
 What the output shows:
@@ -84,21 +92,17 @@ Recompiling the host after adding a cell took about 1.05 s with `nim c` (gcc, wa
 [`experiments/ic-chain`](https://github.com/pietroppeter/cicak/tree/main/experiments/ic-chain)
 measures the same step with `nim ic` on a chain of 20 cell modules, each importing and re-exporting the previous one.
 It hasn't been combined with HCR yet, so this is a separate number.
-Its script:
+Its program:
 """
 
-nbFile "../experiments/ic-chain/run.sh"
+nbFile "../experiments/ic-chain/run.nim"
 
 nbText: """
 Its output, captured when this page was built:
 """
 
 nbCode:
-  let (icOutput, icExit) = execCmdEx("sh ../experiments/ic-chain/run.sh")
-  for line in icOutput.strip.splitLines:
-    if not line.startsWith("files in"):
-      echo line
-  echo "exit code: ", icExit
+  echo runExperiment("../experiments/ic-chain/run.nim")
 
 nbText: """
 The first `nim ic` builds the stdlib and all 20 cells into the IC cache.
@@ -120,7 +124,7 @@ This happened with orc and refc, threads on and off. On 2.4.0 it works with the 
 - **Limits of HCR**: changing a type defined in an earlier cell can't be reloaded,
   and under orc each reload keeps the old library loaded, so memory grows over a long session.
 - **The host executable**: the running `host` can't be overwritten while it runs ("Text file busy"),
-  so the script writes the recompiled one to `host.next`. Only the cell libraries matter for the reload.
+  so the run program writes the recompiled one to `host.next`. Only the cell libraries matter for the reload.
 """
 
 nbSave

@@ -38,8 +38,13 @@ URL SHALL stay the same once published.
 
 ### Requirement: Results come from running code
 A post that reports the behaviour of an experiment SHALL run that experiment when the
-post is rendered and show its real output.
+post is rendered and show its real output. If an experiment fails, rendering the post
+SHALL fail, so a broken experiment never publishes.
 
 #### Scenario: Hot code reloading proof of concept
 - **WHEN** `docs/blog/hcr_poc.nim` is rendered
-- **THEN** it runs `experiments/hcr-cells/run.sh` and `experiments/ic-chain/run.sh` and shows their output
+- **THEN** it runs `experiments/hcr-cells/run.nim` and `experiments/ic-chain/run.nim` and shows their output
+
+#### Scenario: Broken experiment
+- **WHEN** an experiment exits with an error or its host process hangs
+- **THEN** the docs job fails instead of publishing the error as output

@@ -21,6 +21,7 @@ nbText: """
 A usable Nim REPL is within reach by treating each input as a Nim module, loaded into a long-running process
 with hot code reloading (HCR), with incremental compilation (IC, Nim 2.4) keeping each compile cheap.
 This is the direction Araq suggested, and both pieces work on Nim 2.4.0 in a quick test (see What I measured below).
+The next post, [A working PoC with Hot Code Reloading and Incremental Compilation](2026-10-31-hcr-poc.html), shows that test in detail.
 
 - Today's tools (INim, jupyternim) re-run the whole session on every input: about 0.75 s per input even with a warm cache, and side effects run again each time.
 - `nim secret` answers instantly but runs in the compiler VM, which cannot call C code.

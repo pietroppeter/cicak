@@ -13,13 +13,14 @@ on:
 jobs:
   specview:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0  # specview diffs against the base branch
       - uses: jiro4989/setup-nim-action@v2
         with:
-          nim-version: "2.2.4"
+          nim-version: "2.4.x"  # same minor version as the rest of the project
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Render review page
         run: |

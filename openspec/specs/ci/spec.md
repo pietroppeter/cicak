@@ -14,6 +14,14 @@ branch moves.
 - **WHEN** a push runs CI and `version-2-4` has the same commit as the cached build
 - **THEN** Nim comes from the cache and is not rebuilt
 
+### Requirement: Bounded and non-redundant runs
+CI jobs SHALL have time limits, so a hanging experiment cannot hold a runner for hours, and
+a new push to a pull request SHALL cancel that pull request's run still in progress.
+
+#### Scenario: Two quick pushes to a PR
+- **WHEN** a second commit is pushed while the first one's CI is running
+- **THEN** the first run is cancelled and only the second one completes
+
 ### Requirement: Skip CI for non-code changes
 CI SHALL NOT run for pushes or pull requests that only change Markdown files, `LICENSE`,
 `.gitignore`, `openspec/` or `.claude/`.
