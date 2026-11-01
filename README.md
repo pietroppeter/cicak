@@ -1,4 +1,4 @@
-# nim-repl
+# cicak 🦎
 A Read-Eval-Print-Loop for Nim
 
 Status: research. Nothing to install yet. The idea: each input becomes a Nim module, a

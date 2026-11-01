@@ -9,9 +9,9 @@ nb.doc.filename = nb.doc.filename.parentDir / "2026-11-01-cicak.html"
 nb.useTheme(
   titleHtml = "<em>cicak</em> 🦎",
   eyebrow = "dev log · 1 November 2026",
-  epigraph = "A name candidate for the REPL: the small house gecko of Southeast Asia, named after the sound it makes when it answers back.",
+  epigraph = "The name of the REPL: the small house gecko of Southeast Asia, named after the sound it makes when it answers back.",
   meta = "naming · rendered with nimib",
-  summary = "Naming: cicak, the chirping house gecko. Where it lives, what it is called, the stories around it, and why it fits a REPL.",
+  summary = "Naming the REPL cicak, after the chirping house gecko. Where it lives, what it is called, the stories around it, and why it fits a REPL.",
 )
 
 # The maps are SVGs drawn from Natural Earth country shapes (blog/cicak/*.svg);

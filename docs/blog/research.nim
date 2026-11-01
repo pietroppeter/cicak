@@ -73,7 +73,7 @@ the 2.4.0 packaging bug is in [thread 14255](https://forum.nim-lang.org/t/14255)
 
 - **IC works** when the compiler is built from source, because `koch boot` builds `nifler` and `nifmake` into `bin/`.
   The missing `nifler` is only a problem of the released binaries.
-- **IC per-cell cost**: in a [chain of 20 cell modules](https://github.com/pietroppeter/nim-repl/tree/main/experiments/ic-chain),
+- **IC per-cell cost**: in a [chain of 20 cell modules](https://github.com/pietroppeter/cicak/tree/main/experiments/ic-chain),
   each importing and re-exporting the previous one, the first `nim ic` took 5.8 s and adding a 21st cell took **0.43 s**.
   A no-op `nim ic` takes 0.03 s; a one-line edit of a small program 0.54 s, against 0.9 to 1.2 s for `nim c`.
 - **HCR works**: the same cells test runs on 2.4.0. Adding `c2.nim` and then `c3.nim` to a running process
