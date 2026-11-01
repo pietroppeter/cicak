@@ -1,10 +1,18 @@
-# nim-repl
+# cicak 🦎
 A Read-Eval-Print-Loop for Nim
 
 Status: research. Nothing to install yet. The idea: each input becomes a Nim module, a
 long-running process loads it with hot code reloading, and incremental compilation
 (`nim ic`) keeps each step cheap. The research and the first proof of concept are posts
-in the [dev log](docs/blog) (published with GitHub Pages from `main`).
+in the [dev log](https://pietroppeter.github.io/cicak/) (published with GitHub Pages from `main`).
+
+## Dev log
+
+- 2026-11-01 [Cicak, the chirping gecko](https://pietroppeter.github.io/cicak/blog/2026-11-01-cicak.html): why the REPL is called cicak ([source](docs/blog/cicak.nim))
+- 2026-10-31 [PoC: cells as modules with hot code reloading](https://pietroppeter.github.io/cicak/blog/2026-10-31-hcr-poc.html) ([source](docs/blog/hcr_poc.nim))
+- 2026-10-31 [How could a Nim REPL work?](https://pietroppeter.github.io/cicak/blog/2026-10-31-research.html) ([source](docs/blog/research.nim))
+
+When you add a post, add it to this list too.
 
 ## How we work
 

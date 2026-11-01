@@ -50,7 +50,7 @@ nbText: """
 
 ## Running it
 
-[`run.sh`](https://github.com/pietroppeter/nim-repl/blob/main/experiments/hcr-cells/run.sh)
+[`run.sh`](https://github.com/pietroppeter/cicak/blob/main/experiments/hcr-cells/run.sh)
 builds the two runtime libraries HCR needs (`libnimrtl.so` and `libnimhcr.so`),
 compiles the host with only `c1`, and starts it in the background.
 Then it adds `c2`, recompiles, and touches `go`; then the same for `c3`.
@@ -76,7 +76,7 @@ INim, by contrast, re-runs every earlier input each time.
 ## Cost of adding a cell
 
 Recompiling the host after adding a cell took about 1.05 s with `nim c` (gcc, warm cache).
-[`experiments/ic-chain`](https://github.com/pietroppeter/nim-repl/tree/main/experiments/ic-chain)
+[`experiments/ic-chain`](https://github.com/pietroppeter/cicak/tree/main/experiments/ic-chain)
 measures the same step with `nim ic` on a chain of 20 cell modules, each importing and re-exporting the previous one.
 It hasn't been combined with HCR yet, so this is a separate number.
 """

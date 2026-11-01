@@ -9,8 +9,8 @@ import std/[json, strformat]
 import nimib
 
 const
-  projectName* = "nim-repl"
-  repoUrl* = "https://github.com/pietroppeter/nim-repl"
+  projectName* = "cicak"
+  repoUrl* = "https://github.com/pietroppeter/cicak"
 
 const themeHead = """
 <link rel="preconnect" href="https://fonts.googleapis.com">
