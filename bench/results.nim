@@ -323,6 +323,7 @@ nb.useTheme(
   meta = (if metas.len > 0: &"""{last["nim"].getStr} · {last["cc"].getStr} · {last["machine"]["cpu"].getStr}, {last["machine"]["cores"].getInt} cores · runs: {metas.mapIt(it["run"].getStr).join(", ")}""" else: "no runs yet"),
   summary = "Compile and run times of the cicak benchmark scenarios in each mode.",
 )
+nb.doc.context["home_href"] = %"../"  # the dev log index, one level up on the site
 nb.doc.context["stylesheet"] = %(nb.doc.context["stylesheet"].getStr & "\n<script src=\"https://cdn.plot.ly/plotly-2.35.2.min.js\"></script>\n<style>.bench-chart{width:100%;margin:1rem 0 2rem}</style>")
 
 # the setup section describes every environment's runs together

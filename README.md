@@ -34,8 +34,11 @@ output and how long it took.
 [`bench/`](bench) measures how long each cell takes in every mode (`nim c` or `nim ic`,
 re-run or hot reload) and build mode, over four scenarios: integer variables, learning
 `std/tables`, exploring arraymancer, and exploring the result of a heavy computation.
-Design and decisions: [bench/DESIGN.md](bench/DESIGN.md). It runs on chosen machines,
-never on CI.
+Results: <https://pietroppeter.github.io/cicak/bench/results.html> (with the
+[design](https://pietroppeter.github.io/cicak/bench/design.html) and every cell of the
+[scenarios](https://pietroppeter.github.io/cicak/bench/scenarios.html)), published with the
+dev log. Design and decisions: [bench/DESIGN.md](bench/DESIGN.md). The benchmark runs on chosen
+machines, never on CI; CI only renders these pages from the results committed in `bench/results/`.
 
 ## Dev log
 

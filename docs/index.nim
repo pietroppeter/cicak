@@ -45,6 +45,9 @@ nbText: """
 A REPL for Nim, where each input is compiled to native code and the session keeps its
 state. These posts follow its development, newest first. The code is on
 [GitHub](""" & repoUrl & """).
+
+Benchmark: how long each cell takes in every mode, in the [results](bench/results.html),
+with the [design](bench/design.html) and every cell of the [scenarios](bench/scenarios.html).
 """
 
 var items = "<div class=\"posts-wrap\"><table class=\"posts\">\n" &
