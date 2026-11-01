@@ -1,6 +1,19 @@
 # cicak 🦎
 A Read-Eval-Print-Loop for Nim
 
+> *Cicak-cicak di dinding, diam-diam merayap.*
+> *Datang seekor nyamuk, hap! Lalu ditangkap.*
+>
+> Little geckos on the wall, creeping quietly.
+> Along comes a mosquito, hap! And it's caught.
+>
+> Indonesian children's song
+
+**Cicak** is said *CHEE-chak*: in Malay and Indonesian a "c" sounds like the Italian "ci"
+or the English "ch". It is the name of the small house gecko of Southeast Asia, and it
+imitates its call, *cak, cak, cak*. Why we picked it is in the
+[dev log](https://pietroppeter.github.io/cicak/blog/2026-11-01-cicak.html).
+
 Status: research. Nothing to install yet. The idea: each input becomes a Nim module, a
 long-running process loads it with hot code reloading, and incremental compilation
 (`nim ic`) keeps each step cheap. The research and the first proof of concept are posts

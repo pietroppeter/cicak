@@ -82,8 +82,16 @@ nbText: """
 - **Philippines.** A ticking butiki means a visitor or a letter is on the way.
 - **Thailand.** A chirp as someone leaves the house is a bad omen, the "greeting gecko".
 - **Indonesia.** *Cicak vs Buaya* (gecko against crocodile) named the 2009 clash between the anti-corruption agency KPK, the small gecko, and the police and prosecutors, the crocodile. It is now shorthand for a small underdog standing up to something big.
-- **Indonesia.** Children grow up singing *Cicak-cicak di dinding*, "geckos on the wall", about a gecko sneaking up on a mosquito.
+- **Indonesia.** Children grow up singing *Cicak-cicak di dinding*: "Cicak-cicak di dinding, diam-diam merayap. Datang seekor nyamuk, hap! Lalu ditangkap." (Little geckos on the wall, creeping quietly. Along comes a mosquito, hap! And it's caught.)
 
+The song, as Indonesian children know it:
+"""
+
+nbRawHtml: """<div class="video"><iframe src="https://www.youtube-nocookie.com/embed/0eCFEYTSIAs"
+title="Cicak-cicak di dinding, Indonesian children's song" loading="lazy" allowfullscreen
+allow="encrypted-media; picture-in-picture"></iframe></div>"""
+
+nbText: """
 ## Italian echoes
 
 - **Ciak.** *Cicak* sounds almost like *ciak*, the Italian name for the film clapperboard, from the snap it makes. "Ciak, si gira!" starts every take, and a REPL is one quick take after another.
