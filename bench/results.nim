@@ -291,7 +291,7 @@ When later runs are added, check these against them.
 - **`nim ic` costs more to start and less per cell.** Cell 0 takes about 3.9 s in debug
   and 6 s in release, against 1.2 s and 2.2 s with `nim c`. After that it is the cheapest
   per cell: 0.67 s against 0.89 s for integer variables, and 0.9 s against 2.6 s for
-  `std/tables` in release. It overtakes `nim c` after about ten cells.
+  `std/tables` in release. It overtakes `nim c` after 5 to 12 cells, depending on the scenario.
 - **Hot reload wins when earlier cells are expensive to run.** In s3, re-running costs
   101 s in debug (93 s with `nim ic`), and hot reload costs 34 s. For cheap cells, hot reload
   with `nim c` costs about the same per cell as re-running.
