@@ -1,7 +1,8 @@
 name: CI
 
 # Commits that only touch prose (README, BACKLOG, LICENSE, ...) or OpenSpec
-# planning files (openspec/, .claude/) don't run CI. docs/ does, to rebuild the dev log.
+# planning files (openspec/, .claude/) don't run CI, nor the benchmark (bench/), which
+# runs on chosen machines, never on CI. docs/ does, to rebuild the dev log.
 # paths-ignore cannot re-include a path, so this uses paths with negations: the last
 # pattern that matches a file wins.
 on:
@@ -16,6 +17,7 @@ on:
       - "!.claude/**"
       - "!tools/specview.nim"
       - "!.github/workflows/openspec.yml"
+      - "!bench/**"
   pull_request:
     paths:
       - "**"
@@ -26,6 +28,7 @@ on:
       - "!.claude/**"
       - "!tools/specview.nim"
       - "!.github/workflows/openspec.yml"
+      - "!bench/**"
   workflow_dispatch:
 
 # A new push to a PR cancels that PR's run still in progress; runs on main always finish.

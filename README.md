@@ -29,6 +29,14 @@ predefined cells one at a time to a live Nim process, choosing the compiler (`ni
 long-running host, or re-running the whole program each time). Each step shows its
 output and how long it took.
 
+## Benchmark
+
+[`bench/`](bench) measures how long each cell takes in every mode (`nim c` or `nim ic`,
+re-run or hot reload) and build mode, over four scenarios: integer variables, learning
+`std/tables`, exploring arraymancer, and exploring the result of a heavy computation.
+Design and decisions: [bench/DESIGN.md](bench/DESIGN.md). It runs on chosen machines,
+never on CI.
+
 ## Dev log
 
 - 2026-11-01 [Cicak, the chirping gecko](https://pietroppeter.github.io/cicak/blog/2026-11-01-cicak.html): why the REPL is called cicak ([source](docs/blog/cicak.nim))
