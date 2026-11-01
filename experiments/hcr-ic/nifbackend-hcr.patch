@@ -1,0 +1,38 @@
+--- a/compiler/nifbackend.nim	2026-10-28 05:14:50.000000000 +0000
++++ b/compiler/nifbackend.nim	2026-11-01 06:49:24.709777032 +0000
+@@ -678,6 +678,25 @@
+     for target in targets:
+       cgGenerateModule(g, target)
+   icProfMem(mAfterGen)
++  if g.config.hcrOn:
++    # Hot code reloading: every module is its own shared library and lists the
++    # libraries it imports (`hcr_module_list`, from `importDeps`), so `hcrInit`
++    # can load and initialize them. Sem did not run in this process, so
++    # rebuild the edges from the precompiled modules' deps.
++    var suffixPos = initTable[string, FileIndex]()
++    for pm in modules:
++      if pm.module != nil:
++        suffixPos[cachedModuleSuffix(g.config, FileIndex pm.module.position)] = FileIndex pm.module.position
++    if precompSys.module != nil:
++      suffixPos[cachedModuleSuffix(g.config, FileIndex precompSys.module.position)] = FileIndex precompSys.module.position
++    for target in targets:
++      let me = FileIndex target.module.position
++      var deps: seq[FileIndex] = @[]
++      for d in target.deps:
++        let pos = suffixPos.getOrDefault(d.string, FileIndex(-1))
++        if pos.int >= 0 and pos != me and pos != g.config.m.systemFileIdx and pos notin deps:
++          deps.add pos
++      g.importDeps[me] = deps
+   timed tCgFinish:
+     for target in targets:
+       cgFinishModule(g, target, modules, precompSys)
+@@ -848,6 +867,9 @@
+         if not visited.containsOrIncl(suffix):
+           ordered.add m
+     for m in ordered:
++      # with hot code reloading, `hcrInit` loads and initializes every module
++      # through its `hcr_module_list`; NimMain must not call them directly
++      if g.config.hcrOn: break
+       let heads = readCnifHeads(getCFile(m).string & ".nif")
+       registerReusedModuleToMain(bl, m, heads.initRequired, heads.datInitRequired)
+       if heads.globalDtor.len > 0: g.icModuleDtors.add heads.globalDtor
