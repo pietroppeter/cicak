@@ -30,9 +30,9 @@ This is the direction Araq suggested, and both pieces work on Nim 2.4.0 in a qui
 
 ## Where the idea came from
 
-The REPL idea came up in Pietro's forum thread
-[uv add nimlang and other scientific Nim experiments](https://forum.nim-lang.org/t/14230) (2026-10-18).
-The two replies point to two different designs.
+A REPL for Nim is an idea probably as old as Nim itself. It resurfaced recently in Pietro's forum thread
+[uv add nimlang and other scientific Nim experiments](https://forum.nim-lang.org/t/14230) (2026-10-18),
+where two replies point to two different designs.
 
 - **Araq**: "Other project idea: Ask Claude to give Nim a REPL now that IC and hot-code-reloading begin to work."
   This points to compiled cells reloaded into a live process.
