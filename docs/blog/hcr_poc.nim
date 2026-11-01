@@ -54,7 +54,12 @@ nbText: """
 builds the two runtime libraries HCR needs (`libnimrtl.so` and `libnimhcr.so`),
 compiles the host with only `c1`, and starts it in the background.
 Then it adds `c2`, recompiles, and touches `go`; then the same for `c3`.
-The output below was captured when this page was built.
+"""
+
+nbFile "../experiments/hcr-cells/run.sh"
+
+nbText: """
+The output below was captured when this page was built, by running the script above.
 """
 
 nbCode:
@@ -79,6 +84,13 @@ Recompiling the host after adding a cell took about 1.05 s with `nim c` (gcc, wa
 [`experiments/ic-chain`](https://github.com/pietroppeter/cicak/tree/main/experiments/ic-chain)
 measures the same step with `nim ic` on a chain of 20 cell modules, each importing and re-exporting the previous one.
 It hasn't been combined with HCR yet, so this is a separate number.
+Its script:
+"""
+
+nbFile "../experiments/ic-chain/run.sh"
+
+nbText: """
+Its output, captured when this page was built:
 """
 
 nbCode:
