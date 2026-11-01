@@ -105,6 +105,8 @@ Debian/Ubuntu: `apt install libpcre3`).
   more without restarting it.
 - [experiments/ic-chain](experiments/ic-chain): times `nim ic` on a chain of 20 cell
   modules and on adding a 21st.
+- [experiments/hcr-ic](experiments/hcr-ic): hot code reloading with `nim ic`, which
+  does not link on Nim 2.4; the README explains why.
 
 ## License
 

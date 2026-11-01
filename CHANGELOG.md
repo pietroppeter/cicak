@@ -13,6 +13,7 @@ OpenSpec change is archived. Format based on
 - Benchmark (`bench/`): four scenarios of cells in every mode (`nim c`/`nim ic`, re-run
   or hot reload) and build mode, with compile time split into Nim, C compile and link,
   a design doc and a results page with nim-plotly charts; not run on CI
+- Experiment `hcr-ic`: why hot code reloading with `nim ic` does not link on Nim 2.4
 
 ### Changed
 - The project is now called cicak: repository, nimble package, README and dev log

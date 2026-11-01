@@ -25,8 +25,10 @@ two), L (more).
   re-run when HCR can't reload (changed types).
 - **Showing values** (S). `>>> x` prints the value and its type: compile the bare
   expression and, when the compiler says it has to be discarded, wrap it in `echo`.
-- **HCR together with IC** (S). Try `nim ic --hotCodeReloading:on`; the PoC measured
-  them separately (about 1 s per cell with `nim c`, 0.4 s with `nim ic`).
+- **HCR together with IC** (L, upstream). Tried 2026-11-01: `nim ic --hotCodeReloading:on`
+  fails to link on Nim 2.4; the IC backend does not support HCR (three layers, a
+  partial compiler patch and a repro in `experiments/hcr-ic/`). Next step, if it
+  matters: a nim-lang issue. Meanwhile HCR uses `nim c`, and re-run uses `nim ic`.
 - **Other C compilers** (S). The PoC used gcc only. Try zig cc, which nimlang ships.
 
 ## Service and front ends
