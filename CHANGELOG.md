@@ -13,3 +13,5 @@ OpenSpec change is archived. Format based on
 
 ### Changed
 - The project is now called cicak: repository, nimble package, README and dev log
+- Dev log: every page links to the repository, posts link back to the index, and the
+  index is a table of posts with date, title and summary

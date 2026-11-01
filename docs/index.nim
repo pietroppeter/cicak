@@ -47,14 +47,13 @@ state. These posts follow its development, newest first. The code is on
 [GitHub](""" & repoUrl & """).
 """
 
-var items = "<ol class=\"posts\">\n"
+var items = "<div class=\"posts-wrap\"><table class=\"posts\">\n" &
+  "<thead><tr><th>Date</th><th>Post</th><th>Summary</th></tr></thead>\n<tbody>\n"
 for p in posts:
-  items.add "<li><time datetime=\"" & p.date.format("yyyy-MM-dd") & "\">" &
-    p.date.format("d MMMM yyyy") & "</time>\n<a href=\"blog/" & p.file & "\">" &
-    escape(p.title) & "</a>\n"
-  if p.summary.len > 0: items.add "<p>" & escape(p.summary) & "</p>\n"
-  items.add "</li>\n"
-items.add "</ol>"
+  items.add "<tr><td class=\"date\"><time datetime=\"" & p.date.format("yyyy-MM-dd") & "\">" &
+    p.date.format("d MMM yyyy") & "</time></td>\n<td class=\"post\"><a href=\"blog/" & p.file & "\">" &
+    escape(p.title) & "</a></td>\n<td class=\"summary\">" & escape(p.summary) & "</td></tr>\n"
+items.add "</tbody></table></div>"
 nbRawHtml: items
 
 nbSave

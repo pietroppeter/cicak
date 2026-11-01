@@ -5,7 +5,7 @@
 ## Usage, right after `nbInit`:
 ##   nb.useTheme(titleHtml = "...", eyebrow = "...", epigraph = "...", meta = "...")
 
-import std/[json, strformat]
+import std/[json, os, strformat]
 import nimib
 
 const
@@ -117,13 +117,20 @@ th { font: 600 .68rem/1.2 var(--mono); letter-spacing: .08em; text-transform: up
 tr:last-child td { border-bottom: none; }
 td code { background: var(--out-bg); padding: .1em .3em; border-radius: 3px; }
 /* the dev-log index */
-ol.posts { list-style: none; padding: 0; margin: 2rem 0; }
-ol.posts li { padding: 1rem 0; border-bottom: 1px solid var(--rule); }
-ol.posts li:last-child { border-bottom: none; }
-ol.posts time { display: block; font: .72rem/1.4 var(--mono); letter-spacing: .06em; color: var(--mute); text-transform: uppercase; }
-ol.posts a { font: 700 1.25rem/1.3 var(--display); color: var(--ink); text-decoration: none; }
-ol.posts a:hover { color: var(--moss); }
-ol.posts p { margin: .3rem 0 0; color: var(--mute); }
+/* the index: one row per post */
+.posts-wrap { overflow-x: auto; margin: 2rem 0; }
+table.posts { display: table; width: 100%; margin: 0; font-size: .92rem; }
+table.posts th { font: 600 .72rem/1.4 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+table.posts td { min-width: 0; }
+table.posts td.date { white-space: nowrap; font: .8rem/1.6 var(--mono); color: var(--mute); font-variant-numeric: tabular-nums; }
+table.posts td.post { min-width: 11rem; }
+table.posts td.post a { font: 700 1.05rem/1.3 var(--display); color: var(--ink); text-decoration: none; }
+table.posts td.post a:hover { color: var(--moss); }
+table.posts td.summary { min-width: 14rem; color: var(--mute); }
+/* top links: back to the index and to the repository */
+.crumbs { display: flex; flex-wrap: wrap; gap: .4rem 1.2rem; font: .78rem/1.4 var(--mono); }
+.crumbs a { color: var(--moss); text-decoration: none; }
+.crumbs a:hover { text-decoration: underline; }
 /* "Show source": the page's own nimib source, folded at the end */
 details.source { margin-top: 3rem; }
 details.source summary { cursor: pointer; width: max-content; font: 600 .75rem/1 var(--mono); letter-spacing: .06em;
@@ -151,7 +158,10 @@ func themeHeader(blk: JsonNode, nb: Nb): string =
   let c = nb.doc.context
   let (eyebrow, title, epigraph, meta) = (c{"eyebrow"}.getStr, c{"title_html"}.getStr,
                                           c{"epigraph"}.getStr, c{"meta"}.getStr)
+  let home = c{"home_href"}.getStr
+  let back = if home.len > 0: &"""<a href="{home}">← {projectName} dev log</a>""" else: ""
   &"""<header class="mast">
+  <nav class="crumbs">{back}<a href="{repoUrl}">{projectName} on GitHub ↗</a></nav>
   <span class="eyebrow">{eyebrow}</span>
   <h1>{title}</h1>
   <p class="epigraph">{epigraph}</p>
@@ -193,6 +203,8 @@ proc useTheme*(nb: var Nb, titleHtml, eyebrow, epigraph, meta: string, summary =
   nb.doc.context["eyebrow"] = %eyebrow
   nb.doc.context["epigraph"] = %epigraph
   nb.doc.context["meta"] = %meta
+  # posts live in blog/ and link back to the index one level up; the index links to nothing
+  nb.doc.context["home_href"] = %(if nb.doc.filename.parentDir.lastPathPart == "blog": "../" else: "")
   nb.backend.partials["header"] = themeHeader
   nb.backend.partials["footer"] = themeFooter
   nb.backend.partials["left"] = emptyPartial
