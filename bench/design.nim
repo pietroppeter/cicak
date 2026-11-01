@@ -13,7 +13,7 @@ var md = readFile(benchDir / "DESIGN.md")
 let lines = md.splitLines
 if lines.len > 0 and lines[0].startsWith("# "): md = lines[1 .. ^1].join("\n")
 # a link to the results page works next to it
-md = md.replace("rendered by `bench/results.nim`", "rendered by `bench/results.nim` ([results page](results.html))")
+md = md.replace("rendered by `bench/results.nim`", "rendered by `bench/results.nim` ([results page](results.html))").replace("(`bench/scenarios_page.nim`)", "([scenarios page](scenarios.html), `bench/scenarios_page.nim`)")
 
 nbInit
 nb.title = "cicak benchmark: design"

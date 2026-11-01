@@ -98,6 +98,14 @@ proc total(c: CellTime): float = c[phNim] + c[phCc] + c[phLink] + c[phRun]
 
 proc complete(ss: seq[Session]): seq[Session] = ss.filterIt(not it.failed)
 
+proc last10(s: Session): float =
+  ## Mean time per cell (ms) over cells 11 to 20, the last 10 cells of a 20-cell
+  ## scenario: how snappy the REPL feels once a session is under way. Fixed cells
+  ## rather than a session's own last 10, so s0 compares across runs of any length.
+  let n = min(20, s.cells.len - 1)
+  let first = max(1, n - 9)
+  s.cells[first .. n].mapIt(it.total).sum / float(n - first + 1)
+
 proc sec(ms: float): string =
   if ms.isNaN: "–" else: formatFloat(ms / 1000, ffDecimal, (if ms < 10_000: 2 else: 1))
 
@@ -336,6 +344,7 @@ var setup = """
 ## How the benchmark is set up
 
 Why it is set up this way is in the [design doc](design.html); this section says what was run.
+Every cell of every scenario is on the [scenarios page](scenarios.html).
 
 **A session** starts empty and adds the cells of one scenario one at a time, as a REPL user would.
 Each cell is a Nim module that imports every earlier cell. **Cell 0** is the session start: the
@@ -364,7 +373,7 @@ host or reloading the cell).
 |---|---|---|---|---|
 """
 for sc in scenariosIn():
-  setup.add &"| {sc} | {titles.getOrDefault(sc, sc)} | {cellTitles.getOrDefault(sc).len} | {optsIn(sc).join(\", \")} | {scenarioSource(sc)} |\n"
+  setup.add &"| [{sc}](scenarios.html#{sc}) | {titles.getOrDefault(sc, sc)} | {cellTitles.getOrDefault(sc).len} | {optsIn(sc).join(\", \")} | {scenarioSource(sc)} |\n"
 setup.add """
 
 **Runs** (each repetition runs every scenario, build mode and mode of its run, interleaved):
@@ -422,11 +431,75 @@ When later runs are added, check these against them.
 - **Arraymancer costs about 6 s per cell**, mostly Nim, in every mode that works. `nim ic`
   crashes on it (segfault in `nim m`), so the incremental modes fail at cell 1.
 - **`nim ic` with hot reload fails** in every scenario, at the link step of cell 0.
+- **Snappy (under 1 s per cell, cells 11 to 20) only for the simplest cells.** Integer
+  variables get there in every mode, fastest with `nim ic` (0.54 s). Learning `std/tables`
+  comes closest with `nim ic` in debug (1.1 s). The heavy-computation scenario stays at 1.4 s
+  at best (hot reload), and arraymancer at about 7 s.
 - The outputs agree across modes wherever a session completed.
 """
 
+proc snappyChart(): string =
+  ## Mean time per cell over the last 10 cells, per scenario panel, one bar per
+  ## environment (median over repetitions, whiskers min to max), and a 1 s line.
+  ## Raw seconds on purpose: this is what a user of that machine waits.
+  var scs: seq[string]
+  for env in envs:
+    for k in envSessions[env].keys:
+      if k.scenario != "cal" and k.scenario notin scs: scs.add k.scenario
+  scs.sort
+  if scs.len == 0: return ""
+  var traces: seq[JsonNode]
+  var lay = %*{"barmode": "group", "bargap": 0.25,
+               "grid": {"rows": scs.len, "columns": 1, "pattern": "independent", "ygap": 0.45}}
+  var annotations, shapes: seq[JsonNode]
+  for i, sc in scs:
+    let ax = if i == 0: "" else: $(i + 1)
+    var cats: seq[(string, string)]
+    for o in optsOrder:
+      for m in modesOrder:
+        for env in envs:
+          if envSessions[env].getOrDefault((sc, o, m)).complete.len > 0 and (o, m) notin cats: cats.add (o, m)
+    for ei, env in envs:
+      var ys, lo, hi: seq[float]
+      for (o, m) in cats:
+        let v = envSessions[env].getOrDefault((sc, o, m)).complete.mapIt(it.last10 / 1000)
+        if v.len == 0: ys.add NaN; lo.add 0; hi.add 0
+        else:
+          let med = median(v)
+          ys.add med; lo.add med - v.min; hi.add v.max - med
+      let labels = cats.mapIt(it[0] & " · " & it[1])
+      var tr = trace(Trace[float](`type`: PlotType.Bar, text: labels, ys: ys, name: env))
+      tr["x"] = %labels
+      tr.delete "text"
+      tr["error_y"] = %*{"type": "data", "symmetric": false, "array": hi, "arrayminus": lo,
+                         "color": "#7c8c82", "thickness": 1, "width": 3}
+      tr["xaxis"] = %("x" & ax)
+      tr["yaxis"] = %("y" & ax)
+      tr["marker"] = %*{"color": palette[ei mod palette.len], "line": {"width": 0}}
+      tr["legendgroup"] = %env
+      tr["showlegend"] = %(i == 0)
+      tr["hovertemplate"] = %(&"{sc} · %{{x}}<br>{env}: %{{y:.2f}} s per cell<extra></extra>")
+      traces.add tr
+    lay["xaxis" & ax] = %*{"tickangle": -35, "tickfont": {"size": 10}}
+    lay["yaxis" & ax] = %*{"rangemode": "tozero", "title": {"text": "s per cell"}}
+    shapes.add %*{"type": "line", "xref": "x" & ax & " domain", "yref": "y" & ax, "x0": 0, "x1": 1,
+                  "y0": 1, "y1": 1, "line": {"color": "#c0392b", "width": 1, "dash": "dot"}}
+    annotations.add %*{"text": "<b>" & sc & "</b> " & titles.getOrDefault(sc, sc),
+                       "xref": "x" & ax & " domain", "yref": "y" & ax & " domain",
+                       "x": 0, "y": 1.18, "showarrow": false, "xanchor": "left",
+                       "font": {"size": 12, "color": "#5a6f62"}}
+  lay["annotations"] = %annotations
+  lay["shapes"] = %shapes
+  chart(traces, lay, 120 + 300 * scs.len, -0.6 / scs.len.float)
+
+block:
+  let html = snappyChart()
+  if html.len > 0:
+    nbText: "## How snappy, once a session is under way\n\nMean time per cell over **cells 11 to 20** of each session (the last 10 cells of a 20-cell scenario; for s0 too, whatever its length), in seconds, per scenario, build mode and environment (median over repetitions; whiskers from the fastest to the slowest repetition). Below the dotted 1 s line a REPL feels snappy; the lower, the snappier. These are raw seconds on purpose, also across environments: they are what someone using that machine waits."
+    nbRawHtml: html
+
 proc summaryTable(s: string): string =
-  result = "| build | mode | cells ok | cell 0 (s) | per cell (s) | total (s), min–max |\n|---|---|---|---|---|---|\n"
+  result = "| build | mode | cells ok | cell 0 (s) | per cell (s) | cells 11–20 (s per cell) | total (s), min–max |\n|---|---|---|---|---|---|---|\n"
   for o in optsIn(s):
     for m in modesIn(s, o):
       let all = sessions[(s, o, m)]
@@ -434,12 +507,12 @@ proc summaryTable(s: string): string =
       let n = cellTitles.getOrDefault(s).len
       let okCells = all.mapIt(it.okCells).min
       if ss.len == 0:
-        result.add &"| {o} | {m} | {okCells}/{n} | – | – | fails |\n"
+        result.add &"| {o} | {m} | {okCells}/{n} | – | – | – | fails |\n"
         continue
       let c0 = median(ss.mapIt(it.cells[0].total))
       let perCell = median(ss.mapIt(it.cells[1 .. ^1].mapIt(it.total)).concat)
       let totals = ss.mapIt(it.cells.mapIt(it.total).sum)
-      result.add &"| {o} | {m} | {okCells}/{n} | {sec(c0)} | {sec(perCell)} | {sec(median(totals))}, {sec(totals.min)}–{sec(totals.max)} |\n"
+      result.add &"| {o} | {m} | {okCells}/{n} | {sec(c0)} | {sec(perCell)} | {sec(median(ss.mapIt(it.last10)))} | {sec(median(totals))}, {sec(totals.min)}–{sec(totals.max)} |\n"
 
 for env in envs:
   sessions = envSessions[env]

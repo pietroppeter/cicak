@@ -12,3 +12,4 @@ experiments/hcr-cells/*.so
 experiments/hcr-cells/go
 bench/results.html
 bench/design.html
+bench/scenarios.html

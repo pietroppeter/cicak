@@ -34,7 +34,8 @@ compiler the wrapper calls, so this is a matter of running it.
 
 ## Scenarios
 
-Each scenario answers one question. Scenarios 1 to 3 are notebooks in
+Each scenario answers one question. Every cell is shown on the scenarios page
+(`bench/scenarios_page.nim`). Scenarios 1 to 3 are notebooks in
 `bench/scenarios/`, in the same percent format as the playground's notebooks
 (`# %% title` starts a cell), so the playground can show them too.
 
@@ -104,6 +105,11 @@ the output, and the log of a failed step.
   mode. The page shows medians, and min and max as bands and ranges.
 - **Failures**: a failed cell ends its session (unless `--keepGoing`), and is reported with
   its error. Timeouts are generous (900 s compile, 600 s run) and count as failures.
+- **Snappiness**: the mean time per cell over cells 11 to 20 (the last 10 cells of a 20-cell
+  scenario), per scenario, build mode and environment. Under 1 s a REPL feels snappy. It is fixed
+  cells rather than a session's own last 10, so s0 compares across runs of different lengths.
+  It is shown in raw seconds even across environments, as the one exception to the rule below:
+  it is what someone using that machine waits.
 - **Output check**: for each scenario and build mode, `c` and `ic` must print the same, and the
   hot reload outputs of cells 1 to k must add up to what re-run prints at cell k.
 
@@ -191,6 +197,7 @@ nim c -d:release -o:/tmp/benchbin bench/bench.nim
 /tmp/benchbin --scenarios:s3 --opts:debug,release,danger --reps:5 --label:cloud
 nim r bench/results.nim
 nim r bench/design.nim             # this file as bench/design.html
+nim r bench/scenarios_page.nim     # every cell, as bench/scenarios.html
 ```
 
 On another machine with Docker: `bench/docker/run.sh <label> [options]` (see the script).
