@@ -135,6 +135,9 @@ proc trace[T](t: Trace[T]): JsonNode =
   let p = Plot[T](traces: @[t], layout: Layout())
   p.toPlotJson.traces[0]
 
+proc tickStep(scenario: string): int =
+  if cellTitles.getOrDefault(scenario).len > 40: 10 else: 5
+
 proc cumulativeChart(scenario: string): string =
   ## Seconds waited so far after each cell, median over repetitions, with the
   ## min-max band; colour is the mode, dash the build mode.
@@ -169,8 +172,8 @@ proc cumulativeChart(scenario: string): string =
       line["hovertemplate"] = %(name & "<br>cell %{x}: %{y:.1f} s so far<extra></extra>")
       traces.add line
   chart(traces, %*{"title": {"text": "Total wait so far (s)", "x": 0},
-                   "xaxis": {"title": {"text": "cell (0 = session start)"}, "dtick": 5},
-                   "yaxis": {"title": {"text": "s"}, "rangemode": "tozero"}}, 420)
+                   "xaxis": {"title": {"text": "cell (0 = session start)"}, "dtick": tickStep(scenario)},
+                   "yaxis": {"title": {"text": "s"}, "rangemode": "tozero"}}, 440, -0.3)
 
 proc stackedChart(scenario, opt: string): string =
   ## Time per cell, stacked by phase, one panel per mode, shared y axis.
@@ -197,7 +200,7 @@ proc stackedChart(scenario, opt: string): string =
       t["showlegend"] = %(i == 0)
       t["hovertemplate"] = %(&"{modeNames[m]}<br>cell %{{x}}, {ph}: %{{y:.2f}} s<extra></extra>")
       traces.add t
-    lay["xaxis" & ax] = %*{"dtick": 5, "matches": "x"}
+    lay["xaxis" & ax] = %*{"dtick": tickStep(scenario), "matches": "x"}
     lay["yaxis" & ax] = %*{"matches": "y", "rangemode": "tozero"}
     annotations.add %*{"text": modeNames[m], "xref": "x" & ax & " domain", "yref": "y" & ax & " domain",
                        "x": 0, "y": 1.12, "showarrow": false, "xanchor": "left",
@@ -205,29 +208,43 @@ proc stackedChart(scenario, opt: string): string =
   lay["annotations"] = %annotations
   chart(traces, lay, 140 + 150 * ms.len)
 
-proc totalsChart(opt: string): string =
-  ## Median total per scenario and mode, stacked by phase.
+proc totalsChart(): string =
+  ## Median whole-session time, stacked by phase: one panel per scenario (scenarios
+  ## never share an axis), one bar per build mode and mode.
+  let scs = scenariosIn()
   var traces: seq[JsonNode]
-  for ph in Phase:
-    var xs: seq[string]
-    var ys: seq[float]
-    for s in scenariosIn():
-      for m in modesIn(s, opt):
-        let ss = sessions[(s, opt, m)].complete
-        if ss.len == 0: continue
-        xs.add s & " · " & m
-        ys.add median(ss.mapIt(it.cells.mapIt(it[ph]).sum / 1000))
-    if xs.len == 0: continue
-    var t = trace(Trace[float](`type`: PlotType.Bar, text: xs, ys: ys, name: $ph))
-    t["x"] = %xs
-    t.delete "text"
-    t["marker"] = %*{"color": palette[ph.ord], "line": {"width": 0}}
-    t["hovertemplate"] = %(&"%{{x}}<br>{ph}: %{{y:.1f}} s<extra></extra>")
-    traces.add t
+  var lay = %*{"barmode": "stack", "bargap": 0.25,
+               "grid": {"rows": scs.len, "columns": 1, "pattern": "independent", "ygap": 0.45}}
+  var annotations: seq[JsonNode]
+  for i, sc in scs:
+    let ax = if i == 0: "" else: $(i + 1)
+    var cats: seq[(string, string, string)]   # (label, opt, mode)
+    for o in optsIn(sc):
+      for m in modesIn(sc, o):
+        if sessions[(sc, o, m)].complete.len > 0: cats.add (o & " · " & m, o, m)
+    for ph in Phase:
+      var ys: seq[float]
+      for (label, o, m) in cats:
+        ys.add median(sessions[(sc, o, m)].complete.mapIt(it.cells.mapIt(it[ph]).sum / 1000))
+      var t = trace(Trace[float](`type`: PlotType.Bar, text: cats.mapIt(it[0]), ys: ys, name: $ph))
+      t["x"] = %cats.mapIt(it[0])
+      t.delete "text"
+      t["xaxis"] = %("x" & ax)
+      t["yaxis"] = %("y" & ax)
+      t["marker"] = %*{"color": palette[ph.ord], "line": {"width": 0}}
+      t["legendgroup"] = % $ph
+      t["showlegend"] = %(i == 0)
+      t["hovertemplate"] = %(&"{sc} · %{{x}}<br>{ph}: %{{y:.1f}} s<extra></extra>")
+      traces.add t
+    lay["xaxis" & ax] = %*{"tickangle": -35, "tickfont": {"size": 10}}
+    lay["yaxis" & ax] = %*{"rangemode": "tozero"}
+    annotations.add %*{"text": "<b>" & sc & "</b> " & titles.getOrDefault(sc, sc),
+                       "xref": "x" & ax & " domain", "yref": "y" & ax & " domain",
+                       "x": 0, "y": 1.18, "showarrow": false, "xanchor": "left",
+                       "font": {"size": 12, "color": "#5a6f62"}}
+  lay["annotations"] = %annotations
   if traces.len == 0: return ""
-  chart(traces, %*{"title": {"text": &"Whole session, median (s), {opt}", "x": 0},
-                   "barmode": "stack", "xaxis": {"tickangle": -40},
-                   "yaxis": {"rangemode": "tozero"}}, 480, -0.45)
+  chart(traces, lay, 120 + 300 * scs.len, -0.6 / scs.len.float)
 
 # ---- checks --------------------------------------------------------------
 
@@ -272,13 +289,66 @@ nb.useTheme(
 )
 nb.doc.context["stylesheet"] = %(nb.doc.context["stylesheet"].getStr & "\n<script src=\"https://cdn.plot.ly/plotly-2.35.2.min.js\"></script>\n<style>.bench-chart{width:100%;margin:1rem 0 2rem}</style>")
 
-nbText: """
-Design and decisions: [bench/DESIGN.md](https://github.com/pietroppeter/cicak/blob/main/bench/DESIGN.md).
-Times are medians over repetitions; bands and ranges show min and max. Cell 0 is the session start
-(compiling `system` and, for hot reload, starting the host); it is counted in every total.
-Modes: `c` or `ic` is the compiler (`nim c`, `nim ic`), `rerun` re-runs the whole program for each
-cell, `hcr` hot reloads the new cell into a running host.
+proc scenarioSource(id: string): string =
+  for f in walkFiles(benchDir / "scenarios" / (id & "_*.nim")):
+    return "[scenarios/" & f.extractFilename & "](https://github.com/pietroppeter/cicak/blob/main/bench/scenarios/" & f.extractFilename & ")"
+  "generated by [bench.nim](https://github.com/pietroppeter/cicak/blob/main/bench/bench.nim)"
+
+proc argValue(meta: JsonNode, key, default: string): string =
+  for a in meta["args"]:
+    let s = a.getStr
+    if s.startsWith("--" & key & ":"): return s.split(':', 1)[1]
+  default
+
+var setup = """
+## How the benchmark is set up
+
+Why it is set up this way is in the [design doc](design.html); this section says what was run.
+
+**A session** starts empty and adds the cells of one scenario one at a time, as a REPL user would.
+Each cell is a Nim module that imports every earlier cell. **Cell 0** is the session start: the
+program with no cells is compiled and run (re-run) or the host is compiled and started (hot reload),
+which includes compiling `system`. Every session starts from an empty build cache. A cell that fails
+ends its session.
+
+**Four modes**, each the combination of a compiler and a way of running cells:
+
+| mode | compiler | how a new cell runs |
+|---|---|---|
+| `c+rerun` | `nim c` | the whole program is recompiled and run again: every cell's code runs again |
+| `ic+rerun` | `nim ic` (incremental) | the same, compiled incrementally |
+| `c+hcr` | `nim c --hotcodereloading:on` | a host process stays alive and hot reloads the new cell: only its code runs |
+| `ic+hcr` | `nim ic --hotcodereloading:on` | the same, compiled incrementally (fails on Nim 2.4) |
+
+**Build modes**: debug (no flag), release (`-d:release`), danger (`-d:danger`).
+
+**Phases** of each cell, stacked in the charts: *Nim* (the Nim compiler itself), *C compile*
+(gcc on the generated C files), *link*, and *run or reload* (running the program, starting the
+host or reloading the cell).
+
+**Scenarios** (a scenario is never mixed with another in a chart or table):
+
+| id | scenario | cells | build modes run | source |
+|---|---|---|---|---|
 """
+for sc in scenariosIn():
+  setup.add &"| {sc} | {titles.getOrDefault(sc, sc)} | {cellTitles.getOrDefault(sc).len} | {optsIn(sc).join(\", \")} | {scenarioSource(sc)} |\n"
+setup.add """
+
+**Runs** (each repetition runs every scenario, build mode and mode of its run, interleaved):
+
+| run | scenarios | build modes | modes | repetitions | machine |
+|---|---|---|---|---|---|
+"""
+for m in metas:
+  setup.add &"""| {m["run"].getStr} | {argValue(m, "scenarios", "s0,s1,s2,s3").replace(",", ", ")} | {argValue(m, "opts", "debug,release").replace(",", ", ")} | {argValue(m, "modes", "all four").replace(",", ", ")} | {argValue(m, "reps", "5")} | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} |\n"""
+setup.add """
+Versions: """ & metas.mapIt(it["nim"].getStr & ", " & it["cc"].getStr).deduplicate.join("; ") & """.
+
+**Reading the numbers**: times are medians over the repetitions; ranges and bands show the
+minimum and maximum. Totals include cell 0.
+"""
+nbText: setup
 
 nbText: """
 ## Findings of the first run
@@ -320,12 +390,18 @@ proc summaryTable(s: string): string =
       let totals = ss.mapIt(it.cells.mapIt(it.total).sum)
       result.add &"| {o} | {m} | {okCells}/{n} | {sec(c0)} | {sec(perCell)} | {sec(median(totals))}, {sec(totals.min)}–{sec(totals.max)} |\n"
 
-for o in optsOrder:
-  let html = totalsChart(o)
-  if html.len > 0: nbRawHtml: html
+block:
+  let html = totalsChart()
+  if html.len > 0:
+    nbText: "## Whole session, per scenario\n\nMedian time of a whole session (s), stacked by phase. Each panel is one scenario, with its own scale."
+    nbRawHtml: html
 
 for s in scenariosIn():
   nbText: &"## {s}: {titles.getOrDefault(s, s)}\n\n" & summaryTable(s)
+  block:
+    var cells = "<details><summary>The " & $cellTitles.getOrDefault(s).len & " cells</summary><ol>"
+    for t in cellTitles.getOrDefault(s): cells.add "<li>" & t.multiReplace(("&", "&amp;"), ("<", "&lt;")) & "</li>"
+    nbRawHtml: cells & "</ol></details>"
   nbRawHtml: cumulativeChart(s)
   for o in optsIn(s):
     let html = stackedChart(s, o)
@@ -348,6 +424,6 @@ for s in scenariosIn():
   else:
     nbText: "All sessions completed, and the outputs agree across modes."
 
-nbText: "## Runs\n\n| run | machine | Nim | C compiler | cicak commit | arguments |\n|---|---|---|---|---|---|\n" &
+nbText: "## Run details\n\n| run | machine | Nim | C compiler | cicak commit | arguments |\n|---|---|---|---|---|---|\n" &
   metas.mapIt(&"""| {it["run"].getStr} | {it["machine"]["cpu"].getStr}, {it["machine"]["cores"].getInt} cores, {it["machine"]["memory"].getStr} | {it["nim"].getStr} | {it["cc"].getStr} | {it["cicakCommit"].getStr} | `{it["args"].to(seq[string]).join(" ")}` |""").join("\n")
 nbSave

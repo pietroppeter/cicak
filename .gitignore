@@ -11,3 +11,4 @@ experiments/hcr-cells/host.next
 experiments/hcr-cells/*.so
 experiments/hcr-cells/go
 bench/results.html
+bench/design.html

@@ -7,7 +7,8 @@ imports the earlier cells, compiled with `nim c` or `nim ic`, and run by re-runn
 the whole program or by hot code reloading into a running host.
 
 This file records what is measured and why. The results are on the results page,
-rendered by `bench/results.nim`. The design was reviewed and agreed on 1 November 2026.
+rendered by `bench/results.nim`, which also says what was run (scenarios, modes, runs);
+`bench/design.nim` renders this file as a page next to it. The design was reviewed and agreed on 1 November 2026.
 
 ## What is compared
 
@@ -137,9 +138,11 @@ Results are committed, so the page can be rendered anywhere without running the 
 
 `nim r bench/results.nim [run dirs]` renders `bench/results.html` from every run in
 `bench/results` (or the ones given), with nimib, the dev log's theme and nim-plotly
-(plotly.js from cdn.plot.ly). Per scenario: a summary table, the total wait so far after
-each cell (one line per mode and build mode, with the min-max band), and the time per cell
-stacked by phase, one panel per mode. At the top, the whole-session totals per build mode.
+(plotly.js from cdn.plot.ly). It starts with how the benchmark is set up (scenarios, modes,
+build modes, runs), then the findings. Scenarios are never mixed in a chart or table: the
+whole-session totals are one panel per scenario, and each scenario has its own section with a
+summary table, its cells, the total wait so far after each cell (one line per mode and build
+mode, with the min-max band), and the time per cell stacked by phase, one panel per mode.
 
 ## How to run
 
@@ -151,6 +154,7 @@ nim c -d:release -o:/tmp/benchbin bench/bench.nim
 /tmp/benchbin --scenarios:s0,s1,s2 --opts:debug,release --reps:5 --label:cloud
 /tmp/benchbin --scenarios:s3 --opts:debug,release,danger --reps:5 --label:cloud
 nim r bench/results.nim
+nim r bench/design.nim             # this file as bench/design.html
 ```
 
 A full run takes a few hours on 4 cores. `--reps:1 --s0cells:10` gives a quick check.
