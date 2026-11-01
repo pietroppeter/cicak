@@ -112,7 +112,7 @@ proc modesIn(scenario, opt: string): seq[string] =
 # ---- charts --------------------------------------------------------------
 
 var chartCount = 0
-proc chart(traces: seq[JsonNode], layout: JsonNode, height = 380): string =
+proc chart(traces: seq[JsonNode], layout: JsonNode, height = 380, legendY = -0.18): string =
   ## A plotly chart as HTML; plotly.js comes from cdn.plot.ly (loaded once, in the head).
   inc chartCount
   let id = "chart" & $chartCount
@@ -122,7 +122,7 @@ proc chart(traces: seq[JsonNode], layout: JsonNode, height = 380): string =
   lay["paper_bgcolor"] = %"rgba(0,0,0,0)"
   lay["plot_bgcolor"] = %"rgba(0,0,0,0)"
   lay["font"] = %*{"family": "JetBrains Mono, monospace", "size": 11, "color": "#7c8c82"}
-  lay["legend"] = %*{"orientation": "h", "y": -0.18, "traceorder": "normal"}
+  lay["legend"] = %*{"orientation": "h", "y": legendY, "traceorder": "normal"}
   for ax in ["xaxis", "yaxis", "xaxis2", "yaxis2", "xaxis3", "yaxis3", "xaxis4", "yaxis4"]:
     if ax in lay:
       lay[ax]["gridcolor"] = %"rgba(124,140,130,0.18)"
@@ -227,7 +227,7 @@ proc totalsChart(opt: string): string =
   if traces.len == 0: return ""
   chart(traces, %*{"title": {"text": &"Whole session, median (s), {opt}", "x": 0},
                    "barmode": "stack", "xaxis": {"tickangle": -40},
-                   "yaxis": {"rangemode": "tozero"}}, 420)
+                   "yaxis": {"rangemode": "tozero"}}, 480, -0.45)
 
 # ---- checks --------------------------------------------------------------
 
@@ -278,6 +278,30 @@ Times are medians over repetitions; bands and ranges show min and max. Cell 0 is
 (compiling `system` and, for hot reload, starting the host); it is counted in every total.
 Modes: `c` or `ic` is the compiler (`nim c`, `nim ic`), `rerun` re-runs the whole program for each
 cell, `hcr` hot reloads the new cell into a running host.
+"""
+
+nbText: """
+## Findings of the first run
+
+From the cloud run of 1 November 2026 (5 repetitions; the numbers are in the tables below).
+When later runs are added, check these against them.
+
+- **The Nim frontend is most of the wait.** In nearly every cell the blue part is the largest,
+  in every mode. Speeding up a cell means speeding up semantic checking, more than C.
+- **`nim ic` costs more to start and less per cell.** Cell 0 takes about 3.9 s in debug
+  and 6 s in release, against 1.2 s and 2.2 s with `nim c`. After that it is the cheapest
+  per cell: 0.67 s against 0.89 s for integer variables, and 0.9 s against 2.6 s for
+  `std/tables` in release. It overtakes `nim c` after about ten cells.
+- **Hot reload wins when earlier cells are expensive to run.** In s3, re-running costs
+  101 s in debug (93 s with `nim ic`), and hot reload costs 34 s. For cheap cells, hot reload
+  with `nim c` costs about the same per cell as re-running.
+- **Release builds mostly add C compile time.** `std/tables` goes from 29 s to 50 s with
+  `nim c`. Only the heavy computation gains, and in hot reload mode, where it runs once,
+  that gain is cancelled out. Danger is about the same as release.
+- **Arraymancer costs about 6 s per cell**, mostly Nim, in every mode that works. `nim ic`
+  crashes on it (segfault in `nim m`), so the incremental modes fail at cell 1.
+- **`nim ic` with hot reload fails** in every scenario, at the link step of cell 0.
+- The outputs agree across modes wherever a session completed.
 """
 
 proc summaryTable(s: string): string =
