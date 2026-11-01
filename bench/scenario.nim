@@ -30,25 +30,38 @@ proc loadScenario*(file: string): Scenario =
   result.description = result.description.strip
 
 proc scenario0*(n: int): Scenario =
-  ## Integer variables: two of every three cells add a variable, the third
-  ## assigns to an earlier one. Generated, so it can run to any length.
+  ## Integer variables that depend on each other: two of every three cells add
+  ## a variable computed from the latest one, the third assigns to an earlier
+  ## variable from the latest. Generated, so it can run to any length.
   result = Scenario(id: "s0", title: "Integer variables (generated)",
-                    description: "Two of every three cells add an integer variable, the third assigns to an earlier one.")
+                    description: "Two of every three cells add an integer variable computed from the latest one, the third updates an earlier variable from the latest.")
+  var defined: seq[int]
+  for i in 1 .. n:
+    if i mod 3 == 0:
+      let (a, b) = (defined[^2], defined[^1])
+      result.cells.add ("update x" & $a, "x" & $a & " = x" & $a & " + x" & $b &
+                        "\necho \"x" & $a & " = \", x" & $a)
+    else:
+      let rhs = if defined.len == 0: $i else: "x" & $defined[^1] & " + " & $i
+      result.cells.add ("add x" & $i, "var x" & $i & "* = " & rhs & "\necho \"x" & $i & " = \", x" & $i)
+      defined.add i
+
+proc independent0(n: int): seq[(string, string)] =
+  ## The first version of s0 (independent variables), kept for calibration so
+  ## that references stay comparable across runs.
   for i in 1 .. n:
     if i mod 3 == 0:
       let j = i - 2
-      result.cells.add ("assign x" & $j, "x" & $j & " = x" & $j & " + " & $i & "\necho \"x" & $j & " = \", x" & $j)
+      result.add ("assign x" & $j, "x" & $j & " = x" & $j & " + " & $i & "\necho \"x" & $j & " = \", x" & $j)
     else:
-      result.cells.add ("add x" & $i, "var x" & $i & "* = " & $i & "\necho \"x" & $i & " = \", x" & $i)
+      result.add ("add x" & $i, "var x" & $i & "* = " & $i & "\necho \"x" & $i & " = \", x" & $i)
 
 proc calibration*(): Scenario =
   ## The same small session in every run, at its start and at its end: the
   ## environment's reference time, phase by phase (see DESIGN.md). Ten cells of
-  ## s0, then one cell with a fixed CPU-bound loop, run once, for the run phase.
-  result = scenario0(10)
-  result.id = "cal"
-  result.title = "Calibration"
-  result.description = "Run at the start and end of every run (c+rerun, debug): the first 10 cells of s0, then a fixed computation that runs once."
+  ## the first s0, then one cell with a fixed CPU-bound loop, run once, for the run phase.
+  result = Scenario(id: "cal", title: "Calibration", cells: independent0(10),
+                    description: "Run at the start and end of every run (c+rerun, debug): ten cells adding and assigning independent integer variables, then a fixed computation that runs once.")
   result.cells.add ("fixed computation", """var acc* = 0'u64
 for i in 0'u64 ..< 300_000_000'u64:
   acc = acc * 6364136223846793005'u64 + i
