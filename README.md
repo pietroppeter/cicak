@@ -58,6 +58,12 @@ sh build_all.sh     # builds bin/nim, bin/nifler, bin/nifmake
 ./koch atlas        # builds bin/atlas
 ```
 
+The official linux_x64 tarball was rebuilt on 2026-10-28 and now ships `nifler` and
+`nifmake` too. [`tools/cloud-setup.sh`](tools/cloud-setup.sh) installs it (falling back
+to the source build above if the tools are missing) and links everything into
+`/usr/local/bin`. It is the setup script for Claude Code cloud sessions: paste it into
+the environment's Setup script field.
+
 Dependencies are managed with [atlas](https://github.com/nim-lang/atlas):
 
 ```sh
