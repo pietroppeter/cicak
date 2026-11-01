@@ -11,3 +11,5 @@ srcDir        = "src"
 requires "nim >= 2.4.0"
 requires "nimib >= 0.4.2"
 
+requires "https://github.com/SciNim/nim-plotly"
+
