@@ -1,8 +1,6 @@
 # nim-repl
 A Read-Eval-Print-Loop for Nim
 
-AI disclosure: this project is mostly vibed. Currently [level 7](https://www.visidata.org/blog/2026/ai/#level-6%3A-bots-coded%2C-human-understands-mostly) on visidata AI scale: Human specced, bots coded.
-
 Status: research. Nothing to install yet. The idea: each input becomes a Nim module, a
 long-running process loads it with hot code reloading, and incremental compilation
 (`nim ic`) keeps each step cheap. The research and the first proof of concept are posts
