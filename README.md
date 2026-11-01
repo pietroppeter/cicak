@@ -19,6 +19,16 @@ long-running process loads it with hot code reloading, and incremental compilati
 (`nim ic`) keeps each step cheap. The research and the first proof of concept are posts
 in the [dev log](https://pietroppeter.github.io/cicak/) (published with GitHub Pages from `main`).
 
+## Playground
+
+[cicak-app](https://github.com/pietroppeter/cicak-app) is a playground for these ideas,
+deployed with [Disco](https://disco.cloud) at <https://cicak.pietroppeter.xyz> (its first
+deploy is in progress, so the site may not be up yet). Pick a notebook and add its
+predefined cells one at a time to a live Nim process, choosing the compiler (`nim c`, or
+`nim ic` for incremental compilation) and how cells run (hot code reloading into one
+long-running host, or re-running the whole program each time). Each step shows its
+output and how long it took.
+
 ## Dev log
 
 - 2026-11-01 [Cicak, the chirping gecko](https://pietroppeter.github.io/cicak/blog/2026-11-01-cicak.html): why the REPL is called cicak ([source](docs/blog/cicak.nim))
