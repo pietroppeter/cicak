@@ -62,10 +62,10 @@ for tool in "$PREFIX"/bin/*; do
 done
 hash -r
 
-# nimib's markdown renderer loads libpcre at runtime.
-if ! ldconfig -p 2>/dev/null | grep -q 'libpcre\.so\.3'; then
-  $SUDO apt-get update -qq && $SUDO apt-get install -y -qq libpcre3 || log "could not install libpcre3"
-fi
+# nimib's markdown renderer loads libpcre.so.3 at runtime, and the tarball's
+# nifler and nifmake are linked against musl (nim and atlas are static), so
+# without musl `nim ic` fails with "nifler: not found".
+$SUDO apt-get update -qq && $SUDO apt-get install -y -qq libpcre3 musl || log "could not install libpcre3 musl"
 
 nim -v | head -1
 for tool in nifler nifmake atlas; do
