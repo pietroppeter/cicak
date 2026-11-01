@@ -22,7 +22,7 @@ in the [dev log](https://pietroppeter.github.io/cicak/) (published with GitHub P
 ## Dev log
 
 - 2026-11-01 [Cicak, the chirping gecko](https://pietroppeter.github.io/cicak/blog/2026-11-01-cicak.html): why the REPL is called cicak ([source](docs/blog/cicak.nim))
-- 2026-10-31 [PoC: cells as modules with hot code reloading](https://pietroppeter.github.io/cicak/blog/2026-10-31-hcr-poc.html) ([source](docs/blog/hcr_poc.nim))
+- 2026-10-31 [A working PoC with Hot Code Reloading and Incremental Compilation](https://pietroppeter.github.io/cicak/blog/2026-10-31-hcr-poc.html) ([source](docs/blog/hcr_poc.nim))
 - 2026-10-31 [How could a Nim REPL work?](https://pietroppeter.github.io/cicak/blog/2026-10-31-research.html) ([source](docs/blog/research.nim))
 
 When you add a post, add it to this list too.
@@ -77,7 +77,7 @@ Debian/Ubuntu: `apt install libpcre3`).
 ## Experiments
 
 - [experiments/hcr-cells](experiments/hcr-cells): cells as modules, added to a running
-  process with hot code reloading. `run.sh` starts a host with one cell, then adds two
+  process with hot code reloading. `run.nim` starts a host with one cell, then adds two
   more without restarting it.
 - [experiments/ic-chain](experiments/ic-chain): times `nim ic` on a chain of 20 cell
   modules and on adding a 21st.
