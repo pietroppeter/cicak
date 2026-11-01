@@ -117,20 +117,54 @@ the cicak commit and the arguments.
 | --- | --- |
 | Cloud session (Nim 2.4 at `/opt/nim-2.4.0`, `NIM_LIB` set) | developing the harness, first numbers |
 | GitHub Actions runner, run by hand | repeatable reference numbers (not part of CI) |
-| Disco server (2 vCPU, 4 GB) | "what playground visitors get"; it shares the machine with the live site |
+| Hetzner VPS, the Disco server (2 vCPU, 4 GB) | "what playground visitors get", with `bench/docker/run.sh` at a quiet hour, lighter (3 repetitions, s0 to 40 cells); it shares the machine with the live site |
 | Mac (arm64) | not for now: hot reload doesn't work on arm64 (nim-lang/Nim#26581) |
 
 Do nothing else heavy on the machine while it runs: the harness measures wall time.
+
+`bench/docker/` holds an image (Ubuntu 24.04, gcc 13, Nim 2.4.0 from the official tarball,
+musl for its nifler and nifmake, libblas for arraymancer) and `run.sh`, which runs the benchmark
+in it from a clone of the repository, so any Linux x64 box with Docker can run it. The results
+land in the clone's `bench/results/`.
+
+## Environments and normalisation
+
+An environment is a machine the benchmark runs on, named by the run's `--label`. Raw times from
+different environments are not comparable: a 2 vCPU VPS is slower than a 4-core cloud machine, and
+not uniformly so. These decisions keep comparisons honest:
+
+- **Every run calibrates itself.** It starts and ends with a calibration session, always the same:
+  `c+rerun`, debug, the first 10 cells of s0, then a cell with a fixed CPU-bound loop (it runs
+  once, as the last cell). `--calibrationOnly` runs just that, twice, to calibrate an environment
+  whose runs predate calibration (as the first cloud runs do).
+- **The reference is per phase.** Machines differ unevenly: C compiles run in parallel, so core
+  count matters more for C compile than for the Nim frontend, and the run phase depends on CPU
+  speed alone. The environment's reference is the median over its calibration sessions of: Nim
+  time over cells 1 to 10, C compile and link time over cells 0 to 10, and the run time of the
+  fixed computation.
+- **Drift**: the calibration at the end of a run against the one at its start shows whether the
+  machine slowed down during the run (noisy neighbours, thermal throttling).
+- **Raw within, normalised across.** Each environment keeps its own charts in seconds. Charts that
+  put environments side by side divide each phase by that environment's reference for the phase,
+  and show the result in seconds of the first calibrated environment's reference, so that
+  environment's bars equal its raw medians. Raw seconds from two environments never share a chart.
+- **Ratios need no reference.** Whole-session time against `c+rerun` in the same build mode and
+  environment ("hot reload takes 0.33× the time of re-run on s3") compares environments directly,
+  and is the most robust comparison.
+- **Aggregating across environments** is done only on normalised values or ratios, with the
+  geometric mean (the right average for ratios). Not shown yet: it needs more than one environment.
 
 ## Data
 
 Each run writes `bench/results/<date>T<time>-<label>/`:
 
-- `meta.json`: machine, versions, commit, arguments, scenario and cell titles, runtime library build times.
+- `meta.json`: machine, versions, commit, arguments, the label (environment), scenario and cell titles, runtime library build times.
 - `steps.jsonl`: one line per step (compile, run, start host, reload) with `scenario`, `mode`,
   `compiler`, `strategy`, `opt`, `rep`, `cell`, `step`, `wallMs`, `nimMs`, `ccMs`, `linkMs`,
   `runMs`, `cFiles`, `ok`.
 - `cells.jsonl`: one line per cell with its output, error and the log of a failed step.
+
+Calibration sessions are rows with scenario `cal` (repetition 1 at the start, 2 at the end).
 
 Results are committed, so the page can be rendered anywhere without running the benchmark.
 
@@ -139,7 +173,9 @@ Results are committed, so the page can be rendered anywhere without running the 
 `nim r bench/results.nim [run dirs]` renders `bench/results.html` from every run in
 `bench/results` (or the ones given), with nimib, the dev log's theme and nim-plotly
 (plotly.js from cdn.plot.ly). It starts with how the benchmark is set up (scenarios, modes,
-build modes, runs), then the findings. Scenarios are never mixed in a chart or table: the
+build modes, runs, environments and their references), then the findings. Each environment
+gets its own raw sections; a last section compares environments (ratios, and normalised times
+once two environments are calibrated). Scenarios are never mixed in a chart or table: the
 whole-session totals are one panel per scenario, and each scenario has its own section with a
 summary table, its cells, the total wait so far after each cell (one line per mode and build
 mode, with the min-max band), and the time per cell stacked by phase, one panel per mode.
@@ -156,5 +192,7 @@ nim c -d:release -o:/tmp/benchbin bench/bench.nim
 nim r bench/results.nim
 nim r bench/design.nim             # this file as bench/design.html
 ```
+
+On another machine with Docker: `bench/docker/run.sh <label> [options]` (see the script).
 
 A full run takes a few hours on 4 cores. `--reps:1 --s0cells:10` gives a quick check.

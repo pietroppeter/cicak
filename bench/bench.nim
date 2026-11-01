@@ -14,6 +14,7 @@
 ##   --out:bench/results      parent of the run directory
 ##   --work:/tmp/cicak-bench  where sessions are built
 ##   --keepGoing              after a failed cell, keep adding cells (default: stop)
+##   --calibrationOnly        only the calibration session, twice (an environment's reference)
 ##
 ## Writes <out>/<run id>/{meta.json,steps.jsonl,cells.jsonl}. Not run on CI.
 
@@ -56,6 +57,18 @@ proc scenario0(n: int): Scenario =
     else:
       result.cells.add ("add x" & $i, "var x" & $i & "* = " & $i & "\necho \"x" & $i & " = \", x" & $i)
 
+proc calibration(): Scenario =
+  ## The same small session in every run, at its start and at its end: the
+  ## environment's reference time, phase by phase (see DESIGN.md). Ten cells of
+  ## s0, then one cell with a fixed CPU-bound loop, run once, for the run phase.
+  result = scenario0(10)
+  result.id = "cal"
+  result.title = "Calibration"
+  result.cells.add ("fixed computation", """var acc* = 0'u64
+for i in 0'u64 ..< 300_000_000'u64:
+  acc = acc * 6364136223846793005'u64 + i
+echo acc""")
+
 proc cmdOut(cmd: string): string =
   try: execCmdEx(cmd).output.strip except CatchableError: ""
 
@@ -95,6 +108,7 @@ proc main() =
     outDir = benchDir / "results"
     work = getTempDir() / "cicak-bench"
     keepGoing = false
+    calibrationOnly = false
   for kind, key, val in getopt():
     if kind notin {cmdLongOption, cmdShortOption}: continue
     case key
@@ -108,11 +122,13 @@ proc main() =
     of "out": outDir = val
     of "work": work = val
     of "keepGoing": keepGoing = true
+    of "calibrationOnly": calibrationOnly = true
     else: quit "unknown option --" & key
 
   let nimExe = getEnv("NIM", "nim")
   let cfg0 = Config(nimExe: nimExe, nimLib: nimLibDir(nimExe), ccwrap: benchDir / "ccwrap.sh",
                     compileTimeoutS: 900, runTimeoutS: 600)
+  if calibrationOnly: scenarios = @[]
   var sc: Table[string, Scenario]
   for f in walkFiles(benchDir / "scenarios" / "*.nim"):
     let s = loadScenario(f)
@@ -138,7 +154,8 @@ proc main() =
     "cc": cmdOut(getEnv("CICAK_CC", "gcc") & " --version").splitLines()[0],
     "cicakCommit": cmdOut("git -C " & quoteShell(benchDir) & " rev-parse --short HEAD"),
     "args": commandLineParams(),
-    "scenarios": newJObject(), "rtl": newJObject()}
+    "scenarios": newJObject(), "rtl": newJObject(),
+    "calibration": {"scenario": "cal", "mode": "c+rerun", "opt": "debug", "cells": calibration().cells.len}}
   for id in scenarios:
     meta["scenarios"][id] = %*{"title": sc[id].title, "cells": sc[id].cells.len,
                                "cellTitles": sc[id].cells.mapIt(it[0])}
@@ -179,37 +196,41 @@ proc main() =
     for i in 1 .. 3: discard s.addCell("var w" & $i & "* = " & $i)
     s.cleanup
 
+  proc runOne(id: string, scn: Scenario, mode: Mode, opt: Opt, rep: int, label: string) =
+    var cfg = cfg0
+    for p in scn.paths: cfg.extraFlags.add " --path:" & quoteShell(benchDir / p)
+    let base = %*{"run": runId, "scenario": id, "mode": $mode, "compiler": $mode.compiler,
+                  "strategy": $mode.strategy, "opt": $opt, "rep": rep}
+    let t0 = getMonoTime()
+    stdout.write label & " " & id & " " & $mode & " " & $opt & " rep " & $rep & ": "
+    stdout.flushFile
+    let s = newSession(cfg, work, "session", mode, opt)
+    var r = s.start
+    record(base, r)
+    var done = 0
+    if r.ok:
+      for (title, code) in scn.cells:
+        r = s.addCell(code)
+        record(base, r)
+        if r.ok: inc done
+        elif not keepGoing: break
+    s.cleanup
+    echo done, "/", scn.cells.len, " cells in ",
+         formatFloat((getMonoTime() - t0).inMilliseconds.float / 1000, ffDecimal, 1), " s",
+         (if r.ok: "" else: " (failed: " & r.error & ")")
+
+  # calibration at the start (rep 1) and at the end (rep 2) of the run
+  let cal = calibration()
+  runOne("cal", cal, parseMode("c+rerun"), optDebug, 1, "[calibration]")
   let total = reps * scenarios.len * opts.len * modes.len
   var n = 0
   for rep in 1 .. reps:
     for id in scenarios:
-      let scn = sc[id]
-      var cfg = cfg0
-      for p in scn.paths: cfg.extraFlags.add " --path:" & quoteShell(benchDir / p)
       for o in opts:
         for m in modes:
           inc n
-          let mode = parseMode(m)
-          let opt = parseEnum[Opt](o)
-          let base = %*{"run": runId, "scenario": id, "mode": m, "compiler": $mode.compiler,
-                        "strategy": $mode.strategy, "opt": o, "rep": rep}
-          let t0 = getMonoTime()
-          stdout.write "[" & $n & "/" & $total & "] " & id & " " & m & " " & o & " rep " & $rep & ": "
-          stdout.flushFile
-          let s = newSession(cfg, work, "session", mode, opt)
-          var r = s.start
-          record(base, r)
-          var done = 0
-          if r.ok:
-            for (title, code) in scn.cells:
-              r = s.addCell(code)
-              record(base, r)
-              if r.ok: inc done
-              elif not keepGoing: break
-          s.cleanup
-          echo done, "/", scn.cells.len, " cells in ",
-               formatFloat((getMonoTime() - t0).inMilliseconds.float / 1000, ffDecimal, 1), " s",
-               (if r.ok: "" else: " (failed: " & r.error & ")")
+          runOne(id, sc[id], parseMode(m), parseEnum[Opt](o), rep, "[" & $n & "/" & $total & "]")
+  runOne("cal", cal, parseMode("c+rerun"), optDebug, 2, "[calibration]")
   steps.close
   cellsOut.close
   meta["finished"] = % $now().utc

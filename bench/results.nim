@@ -42,13 +42,18 @@ runDirs.sort
 
 var
   metas: seq[JsonNode]
-  sessions: Table[Key, seq[Session]]      ## one per repetition
+  envSessions: OrderedTable[string, Table[Key, seq[Session]]]  ## environment (run label) -> sessions
+  sessions: Table[Key, seq[Session]]      ## the environment being rendered; one per repetition
+  envs: seq[string]                       ## in the order of their first run
   titles: Table[string, string]
   cellTitles: Table[string, seq[string]]
 
 for d in runDirs:
   let meta = parseFile(d / "meta.json")
   metas.add meta
+  let env = meta["label"].getStr
+  if env notin envs: envs.add env
+  if env notin envSessions: envSessions[env] = initTable[Key, seq[Session]]()
   for id, s in meta["scenarios"]:
     titles[id] = s["title"].getStr
     cellTitles[id] = s["cellTitles"].to(seq[string])
@@ -82,7 +87,7 @@ for d in runDirs:
       s.error = r["error"].getStr
       s.log = r["log"].getStr.strip
   for sk, s in bySession:
-    sessions.mgetOrPut(sk[0], @[]).add s
+    envSessions[env].mgetOrPut(sk[0], @[]).add s
 
 proc median(xs: seq[float]): float =
   if xs.len == 0: return NaN
@@ -98,8 +103,31 @@ proc sec(ms: float): string =
 
 proc scenariosIn(): seq[string] =
   for k in sessions.keys:
-    if k.scenario notin result: result.add k.scenario
+    if k.scenario notin result and k.scenario != "cal": result.add k.scenario
   result.sort
+
+# ---- environments ----------------------------------------------------------
+
+proc reference(env: string): array[Phase, float] =
+  ## The environment's reference time per phase (ms), from its calibration
+  ## sessions: Nim over cells 1-10, C compile and link over cells 0-10, and run
+  ## for the fixed computation in cell 11. NaN without calibration.
+  for ph in Phase: result[ph] = NaN
+  let cal = envSessions[env].getOrDefault(("cal", "debug", "c+rerun")).complete.filterIt(it.cells.len >= 12)
+  if cal.len == 0: return
+  result[phNim] = median(cal.mapIt(it.cells[1 .. 10].mapIt(it[phNim]).sum))
+  result[phCc] = median(cal.mapIt(it.cells[0 .. 10].mapIt(it[phCc]).sum))
+  result[phLink] = median(cal.mapIt(it.cells[0 .. 10].mapIt(it[phLink]).sum))
+  result[phRun] = median(cal.mapIt(it.cells[11][phRun]))
+
+proc calibrated(env: string): bool = not reference(env)[phNim].isNaN
+
+proc drift(env: string): string =
+  ## Calibration at the end of a run against its start, whole session.
+  let cal = envSessions[env].getOrDefault(("cal", "debug", "c+rerun")).complete
+  if cal.len < 2: return "–"
+  let (a, b) = (cal[0].cells.mapIt(it.total).sum, cal[^1].cells.mapIt(it.total).sum)
+  (if b >= a: "+" else: "") & formatFloat((b / a - 1) * 100, ffDecimal, 0) & "%"
 
 proc optsIn(scenario: string): seq[string] =
   for o in optsOrder:
@@ -289,6 +317,10 @@ nb.useTheme(
 )
 nb.doc.context["stylesheet"] = %(nb.doc.context["stylesheet"].getStr & "\n<script src=\"https://cdn.plot.ly/plotly-2.35.2.min.js\"></script>\n<style>.bench-chart{width:100%;margin:1rem 0 2rem}</style>")
 
+# the setup section describes every environment's runs together
+for env, t in envSessions:
+  for k, v in t: sessions.mgetOrPut(k, @[]).add v
+
 proc scenarioSource(id: string): string =
   for f in walkFiles(benchDir / "scenarios" / (id & "_*.nim")):
     return "[scenarios/" & f.extractFilename & "](https://github.com/pietroppeter/cicak/blob/main/bench/scenarios/" & f.extractFilename & ")"
@@ -337,16 +369,35 @@ setup.add """
 
 **Runs** (each repetition runs every scenario, build mode and mode of its run, interleaved):
 
-| run | scenarios | build modes | modes | repetitions | machine |
-|---|---|---|---|---|---|
+| run | environment | scenarios | build modes | modes | repetitions | machine |
+|---|---|---|---|---|---|---|
 """
 for m in metas:
-  setup.add &"""| {m["run"].getStr} | {argValue(m, "scenarios", "s0,s1,s2,s3").replace(",", ", ")} | {argValue(m, "opts", "debug,release").replace(",", ", ")} | {argValue(m, "modes", "all four").replace(",", ", ")} | {argValue(m, "reps", "5")} | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} |\n"""
+  if m["args"].to(seq[string]).anyIt(it == "--calibrationOnly"):
+    setup.add &"""| {m["run"].getStr} | {m["label"].getStr} | calibration only | – | – | – | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} |""" & "\n"
+    continue
+  setup.add &"""| {m["run"].getStr} | {m["label"].getStr} | {argValue(m, "scenarios", "s0,s1,s2,s3").replace(",", ", ")} | {argValue(m, "opts", "debug,release").replace(",", ", ")} | {argValue(m, "modes", "all four").replace(",", ", ")} | {argValue(m, "reps", "5")} | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} |""" & "\n"
 setup.add """
 Versions: """ & metas.mapIt(it["nim"].getStr & ", " & it["cc"].getStr).deduplicate.join("; ") & """.
 
+**Environments** are the machines the runs come from (a run's label). Each run starts and ends
+with a **calibration session**, always the same: `c+rerun`, debug, the first 10 cells of s0 and a
+cell with a fixed computation. Its median, phase by phase, is the environment's **reference**.
+Times from different environments are compared only after dividing each phase by the
+environment's reference for that phase. *Drift* is the calibration at the end of a run against
+the one at its start.
+
+| environment | machine | reference Nim (s) | C compile (s) | link (s) | run (s) | drift |
+|---|---|---|---|---|---|---|
+"""
+for env in envs:
+  let m = metas.filterIt(it["label"].getStr == env)[^1]
+  let r = reference(env)
+  setup.add &"""| {env} | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} | {sec(r[phNim])} | {sec(r[phCc])} | {sec(r[phLink])} | {sec(r[phRun])} | {drift(env)} |""" & "\n"
+setup.add """
 **Reading the numbers**: times are medians over the repetitions; ranges and bands show the
-minimum and maximum. Totals include cell 0.
+minimum and maximum. Totals include cell 0. Within an environment, times are seconds; across
+environments, only normalised times and ratios are shown.
 """
 nbText: setup
 
@@ -390,40 +441,134 @@ proc summaryTable(s: string): string =
       let totals = ss.mapIt(it.cells.mapIt(it.total).sum)
       result.add &"| {o} | {m} | {okCells}/{n} | {sec(c0)} | {sec(perCell)} | {sec(median(totals))}, {sec(totals.min)}–{sec(totals.max)} |\n"
 
-block:
-  let html = totalsChart()
-  if html.len > 0:
-    nbText: "## Whole session, per scenario\n\nMedian time of a whole session (s), stacked by phase. Each panel is one scenario, with its own scale."
-    nbRawHtml: html
-
-for s in scenariosIn():
-  nbText: &"## {s}: {titles.getOrDefault(s, s)}\n\n" & summaryTable(s)
+for env in envs:
+  sessions = envSessions[env]
+  let envSuffix = if envs.len > 1: " · " & env else: ""
+  if envs.len > 1:
+    nbText: &"# Environment: {env}\n\nRaw times, in seconds, on this environment only."
   block:
-    var cells = "<details><summary>The " & $cellTitles.getOrDefault(s).len & " cells</summary><ol>"
-    for t in cellTitles.getOrDefault(s): cells.add "<li>" & t.multiReplace(("&", "&amp;"), ("<", "&lt;")) & "</li>"
-    nbRawHtml: cells & "</ol></details>"
-  nbRawHtml: cumulativeChart(s)
-  for o in optsIn(s):
-    let html = stackedChart(s, o)
-    if html.len > 0: nbRawHtml: html
-  # failures and output checks
-  var notes = ""
-  for o in optsIn(s):
-    for m in modesIn(s, o):
-      let failed = sessions[(s, o, m)].filterIt(it.failed)
-      if failed.len > 0:
-        let f = failed[0]
-        let lastLine = f.log.splitLines.filterIt(it.strip.len > 0 and not it.startsWith("(exit code"))
-        let errLines = lastLine.filterIt("Error" in it or "error:" in it)
-        let why = if errLines.len > 0: errLines[^1] elif lastLine.len > 0: lastLine[^1] else: f.error
-        notes.add &"- **{m}, {o}** failed in {failed.len} of {sessions[(s, o, m)].len} runs, at cell {f.failedAt} ({f.error}): `{why.replace(\"`\", \"'\")[0 ..< min(why.len, 160)]}`\n"
-    for msg in outputMismatches(s, o):
-      notes.add &"- **output check, {o}**: {msg}\n"
-  if notes.len > 0:
-    nbText: "**Failures and output checks**\n\n" & notes
-  else:
-    nbText: "All sessions completed, and the outputs agree across modes."
+    let html = totalsChart()
+    if html.len > 0:
+      nbText: &"## Whole session, per scenario{envSuffix}\n\nMedian time of a whole session (s), stacked by phase. Each panel is one scenario, with its own scale."
+      nbRawHtml: html
 
-nbText: "## Run details\n\n| run | machine | Nim | C compiler | cicak commit | arguments |\n|---|---|---|---|---|---|\n" &
-  metas.mapIt(&"""| {it["run"].getStr} | {it["machine"]["cpu"].getStr}, {it["machine"]["cores"].getInt} cores, {it["machine"]["memory"].getStr} | {it["nim"].getStr} | {it["cc"].getStr} | {it["cicakCommit"].getStr} | `{it["args"].to(seq[string]).join(" ")}` |""").join("\n")
+  for s in scenariosIn():
+    nbText: &"## {s}: {titles.getOrDefault(s, s)}{envSuffix}\n\n" & summaryTable(s)
+    block:
+      var cells = "<details><summary>The " & $cellTitles.getOrDefault(s).len & " cells</summary><ol>"
+      for t in cellTitles.getOrDefault(s): cells.add "<li>" & t.multiReplace(("&", "&amp;"), ("<", "&lt;")) & "</li>"
+      nbRawHtml: cells & "</ol></details>"
+    nbRawHtml: cumulativeChart(s)
+    for o in optsIn(s):
+      let html = stackedChart(s, o)
+      if html.len > 0: nbRawHtml: html
+    # failures and output checks
+    var notes = ""
+    for o in optsIn(s):
+      for m in modesIn(s, o):
+        let failed = sessions[(s, o, m)].filterIt(it.failed)
+        if failed.len > 0:
+          let f = failed[0]
+          let lastLine = f.log.splitLines.filterIt(it.strip.len > 0 and not it.startsWith("(exit code"))
+          let errLines = lastLine.filterIt("Error" in it or "error:" in it)
+          let why = if errLines.len > 0: errLines[^1] elif lastLine.len > 0: lastLine[^1] else: f.error
+          notes.add &"- **{m}, {o}** failed in {failed.len} of {sessions[(s, o, m)].len} runs, at cell {f.failedAt} ({f.error}): `{why.replace(\"`\", \"'\")[0 ..< min(why.len, 160)]}`\n"
+      for msg in outputMismatches(s, o):
+        notes.add &"- **output check, {o}**: {msg}\n"
+    if notes.len > 0:
+      nbText: "**Failures and output checks**\n\n" & notes
+    else:
+      nbText: "All sessions completed, and the outputs agree across modes."
+
+
+# ---- across environments ----------------------------------------------------
+
+proc wholeSession(env: string, k: Key): array[Phase, float] =
+  ## Median whole-session time per phase (ms) in an environment; NaN if none completed.
+  let ss = envSessions[env].getOrDefault(k).complete
+  for ph in Phase:
+    result[ph] = if ss.len == 0: NaN else: median(ss.mapIt(it.cells.mapIt(it[ph]).sum))
+
+proc allScenarios(): seq[string] =
+  for env in envs:
+    for k in envSessions[env].keys:
+      if k.scenario != "cal" and k.scenario notin result: result.add k.scenario
+  result.sort
+
+proc allCats(sc: string): seq[(string, string)] =
+  for o in optsOrder:
+    for m in modesOrder:
+      for env in envs:
+        if (sc, o, m) in envSessions[env] and envSessions[env][(sc, o, m)].complete.len > 0:
+          if (o, m) notin result: result.add (o, m)
+
+proc ratioTables(): string =
+  ## Whole-session time against c+rerun in the same build mode: needs no reference.
+  for sc in allScenarios():
+    result.add &"**{sc}** {titles.getOrDefault(sc, sc)}\n\n| build · mode | " & envs.join(" | ") & " |\n|---|" & "---|".repeat(envs.len) & "\n"
+    for (o, m) in allCats(sc):
+      result.add &"| {o} · {m} |"
+      for env in envs:
+        let a = wholeSession(env, (sc, o, m)).sum
+        let b = wholeSession(env, (sc, o, "c+rerun")).sum
+        result.add " " & (if a.isNaN or b.isNaN: "–" else: formatFloat(a / b, ffDecimal, 2) & "×") & " |"
+      result.add "\n"
+    result.add "\n"
+
+proc normalisedChart(): string =
+  ## Whole-session time per environment, each phase divided by the environment's
+  ## reference for it and expressed in seconds of the first environment's
+  ## reference. One panel per scenario, one bar per environment.
+  let cal = envs.filterIt(calibrated(it))
+  if cal.len < 2: return ""
+  let base = reference(cal[0])
+  let scs = allScenarios()
+  var traces: seq[JsonNode]
+  var lay = %*{"barmode": "group", "bargap": 0.25,
+               "grid": {"rows": scs.len, "columns": 1, "pattern": "independent", "ygap": 0.45}}
+  var annotations: seq[JsonNode]
+  for i, sc in scs:
+    let ax = if i == 0: "" else: $(i + 1)
+    let cats = allCats(sc)
+    for ei, env in cal:
+      let r = reference(env)
+      var ys: seq[float]
+      for (o, m) in cats:
+        let w = wholeSession(env, (sc, o, m))
+        var t = 0.0
+        for ph in Phase: t += w[ph] / r[ph] * base[ph]
+        ys.add t / 1000
+      var tr = trace(Trace[float](`type`: PlotType.Bar, text: cats.mapIt(it[0] & " · " & it[1]), ys: ys, name: env))
+      tr["x"] = %cats.mapIt(it[0] & " · " & it[1])
+      tr.delete "text"
+      tr["xaxis"] = %("x" & ax)
+      tr["yaxis"] = %("y" & ax)
+      tr["marker"] = %*{"color": palette[ei mod palette.len], "line": {"width": 0}}
+      tr["legendgroup"] = %env
+      tr["showlegend"] = %(i == 0)
+      tr["hovertemplate"] = %(&"{sc} · %{{x}}<br>{env}: %{{y:.1f}} (normalised s)<extra></extra>")
+      traces.add tr
+    lay["xaxis" & ax] = %*{"tickangle": -35, "tickfont": {"size": 10}}
+    lay["yaxis" & ax] = %*{"rangemode": "tozero"}
+    annotations.add %*{"text": "<b>" & sc & "</b> " & titles.getOrDefault(sc, sc),
+                       "xref": "x" & ax & " domain", "yref": "y" & ax & " domain",
+                       "x": 0, "y": 1.18, "showarrow": false, "xanchor": "left",
+                       "font": {"size": 12, "color": "#5a6f62"}}
+  lay["annotations"] = %annotations
+  chart(traces, lay, 120 + 300 * scs.len, -0.6 / scs.len.float)
+
+block:
+  var text = "## Comparing environments\n\n"
+  let cal = envs.filterIt(calibrated(it))
+  if cal.len >= 2:
+    text.add &"Whole-session time with every phase normalised by its environment's reference, shown in seconds of the **{cal[0]}** reference (so {cal[0]}'s bars are its raw medians). A bar higher than {cal[0]}'s means that environment is slower at this than its calibration predicts.\n"
+  else:
+    text.add "Normalised comparisons appear here once two environments have calibrated runs" & (if cal.len == 1: &" (so far only **{cal[0]}**)." else: ".") & "\n"
+  text.add "\n**Time against `c+rerun`** in the same build mode and environment (whole session, medians). Ratios need no reference, so they compare environments directly.\n\n" & ratioTables()
+  nbText: text
+  let html = normalisedChart()
+  if html.len > 0: nbRawHtml: html
+
+nbText: "## Run details\n\n| run | environment | machine | Nim | C compiler | cicak commit | arguments |\n|---|---|---|---|---|---|---|\n" &
+  metas.mapIt(&"""| {it["run"].getStr} | {it["label"].getStr} | {it["machine"]["cpu"].getStr}, {it["machine"]["cores"].getInt} cores, {it["machine"]["memory"].getStr} | {it["nim"].getStr} | {it["cc"].getStr} | {it["cicakCommit"].getStr} | `{it["args"].to(seq[string]).join(" ")}` |""").join("\n")
 nbSave
