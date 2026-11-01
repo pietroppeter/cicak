@@ -52,10 +52,9 @@ Decisions:
   import every earlier cell, so a second `var x` makes every later use of `x` ambiguous.
   s0 adds a variable in two of every three cells and assigns to an earlier one in the
   third. Redefinition gets its own scenario once cicak handles it (`import cell_K except x`).
-- **s0's variables depend on each other**: each new variable is the latest minus the one before
-  it (`var x5* = x4 - x2`), and each update sets the one before from the latest
-  (`x4 = x5 - x4`), so every cell reads symbols from earlier cells, as in a real session. The
-  values cycle between -2 and 2, so s0 can run to any length without overflowing.
+- **s0's variables depend on each other**: each new variable is computed from the latest one
+  (`var x5* = x4 + 5`), and each assignment updates an earlier variable from the latest
+  (`x4 = x4 + x5`), so every cell reads symbols from earlier cells, as in a real session.
   The first version (until 1 November 2026) used independent variables; its runs were redone,
   and the calibration session keeps those independent cells so references stay comparable.
 - **s0 runs to 100 cells**, since it is cheap and 20 cells barely show the growth.

@@ -31,22 +31,18 @@ proc loadScenario*(file: string): Scenario =
 
 proc scenario0*(n: int): Scenario =
   ## Integer variables that depend on each other: two of every three cells add
-  ## a variable, the latest minus the one before it; the third updates the one
-  ## before from the latest. The values cycle between -2 and 2, so any length
-  ## stays small. Generated, so it can run to any length.
+  ## a variable computed from the latest one, the third assigns to an earlier
+  ## variable from the latest. Generated, so it can run to any length.
   result = Scenario(id: "s0", title: "Integer variables (generated)",
-                    description: "Two of every three cells add an integer variable, the latest minus the one before it; the third updates an earlier variable from the latest. The values cycle between -2 and 2.")
+                    description: "Two of every three cells add an integer variable computed from the latest one, the third updates an earlier variable from the latest.")
   var defined: seq[int]
   for i in 1 .. n:
     if i mod 3 == 0:
       let (a, b) = (defined[^2], defined[^1])
-      result.cells.add ("update x" & $a, "x" & $a & " = x" & $b & " - x" & $a &
+      result.cells.add ("update x" & $a, "x" & $a & " = x" & $a & " + x" & $b &
                         "\necho \"x" & $a & " = \", x" & $a)
     else:
-      let rhs = case defined.len
-        of 0: "1"
-        of 1: "x" & $defined[^1] & " + 1"
-        else: "x" & $defined[^1] & " - x" & $defined[^2]
+      let rhs = if defined.len == 0: $i else: "x" & $defined[^1] & " + " & $i
       result.cells.add ("add x" & $i, "var x" & $i & "* = " & rhs & "\necho \"x" & $i & " = \", x" & $i)
       defined.add i
 
