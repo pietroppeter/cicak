@@ -183,8 +183,11 @@ Results are committed, so the page can be rendered anywhere without running the 
 
 `nim r bench/results.nim [run dirs]` renders `bench/results.html` from every run in
 `bench/results` (or the ones given), with nimib, the dev log's theme and nim-plotly
-(plotly.js from cdn.plot.ly). It starts with how the benchmark is set up (scenarios, modes,
-build modes, runs, environments and their references), then the findings. Each environment
+(plotly.js vendored in `docs/assets`). It starts with how the benchmark is set up (scenarios, modes,
+build modes, runs, environments and their references), then the charts and tables. It is a
+living document and carries no interpretation: what the results mean goes in dated dev log
+posts, with screenshots of the charts they discuss (the first:
+[What the first benchmark runs say](https://pietroppeter.github.io/cicak/blog/2026-11-06-bench-results.html)). Each environment
 gets its own raw sections; a last section compares environments (ratios, and normalised times
 once two environments are calibrated). Scenarios are never mixed in a chart or table: the
 whole-session totals are one panel per scenario, and each scenario has its own section with a

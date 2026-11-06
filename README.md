@@ -37,11 +37,23 @@ re-run or hot reload) and build mode, over four scenarios: integer variables, le
 Results: <https://pietroppeter.github.io/cicak/bench/results.html> (with the
 [design](https://pietroppeter.github.io/cicak/bench/design.html) and every cell of the
 [scenarios](https://pietroppeter.github.io/cicak/bench/scenarios.html)), published with the
-dev log. Design and decisions: [bench/DESIGN.md](bench/DESIGN.md). The benchmark runs on chosen
+dev log. These pages are living documents with no interpretation; what the results mean
+goes in dated dev log posts, with screenshots of the charts they discuss. Design and decisions: [bench/DESIGN.md](bench/DESIGN.md). The benchmark runs on chosen
 machines, never on CI; CI only renders these pages from the results committed in `bench/results/`.
+
+## Living documents
+
+Kept up to date as the project changes (the dev log posts below are dated snapshots):
+
+- [Benchmark results](https://pietroppeter.github.io/cicak/bench/results.html): every committed run, re-rendered when a run is added ([source](bench/results.nim))
+- [Benchmark design](https://pietroppeter.github.io/cicak/bench/design.html): what is measured and why ([source](bench/DESIGN.md))
+- [Benchmark scenarios](https://pietroppeter.github.io/cicak/bench/scenarios.html): every cell of every scenario ([source](bench/scenarios_page.nim))
+- [Specs](openspec/specs): how the project behaves today, with [OpenSpec](#how-we-work)
+- [Backlog](BACKLOG.md) and [changelog](CHANGELOG.md)
 
 ## Dev log
 
+- 2026-11-06 [What the first benchmark runs say](https://pietroppeter.github.io/cicak/blog/2026-11-06-bench-results.html): reading the first benchmark runs, with snapshots of the charts ([source](docs/blog/bench_results.nim))
 - 2026-11-01 [Cicak, the chirping gecko](https://pietroppeter.github.io/cicak/blog/2026-11-01-cicak.html): why the REPL is called cicak ([source](docs/blog/cicak.nim))
 - 2026-10-31 [A working PoC with Hot Code Reloading and Incremental Compilation](https://pietroppeter.github.io/cicak/blog/2026-10-31-hcr-poc.html) ([source](docs/blog/hcr_poc.nim))
 - 2026-10-31 [How could a Nim REPL work?](https://pietroppeter.github.io/cicak/blog/2026-10-31-research.html) ([source](docs/blog/research.nim))
@@ -62,7 +74,9 @@ When you add a post, add it to this list too.
   files. On PRs that touch `openspec/` or `BACKLOG.md`, CI posts a summary on the run
   page and attaches the full page as the `specview` artifact.
 - **Dev log**: dated [nimib](https://github.com/pietroppeter/nimib) posts in `docs/blog`,
-  listed by `docs/index.nim`, with the theme in `docs/theme.nim`. Posts that report on
+  listed by `docs/index.nim`, with the theme in `docs/theme.nim`. The index lists the
+  living documents first (edit the table in `docs/index.nim` to add one), then the posts.
+  A post's images go in a folder next to it (`docs/blog/<folder>/`), which CI publishes. Posts that report on
   an experiment run it when they are rendered, so they show real output.
 - Changes that only touch Markdown, `openspec/` or `.claude/` don't trigger the main CI.
 

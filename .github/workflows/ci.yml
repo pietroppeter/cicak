@@ -106,6 +106,7 @@ jobs:
         run: |
           mkdir -p _site/blog _site/bench
           cp docs/blog/*.html _site/blog/
+          cp -r docs/blog/*/ _site/blog/  # a post's images (blog/<folder>/)
           cp docs/index.html _site/index.html
           cp -r docs/assets _site/assets
           cp bench/results.html bench/design.html bench/scenarios.html _site/bench/

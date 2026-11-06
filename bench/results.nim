@@ -326,6 +326,14 @@ nb.useTheme(
 nb.doc.context["home_href"] = %"../"  # the dev log index, one level up on the site
 nb.doc.context["stylesheet"] = %(nb.doc.context["stylesheet"].getStr & "\n<script src=\"" & nb.assetsHref & "plotly/plotly-2.35.2.min.js\"></script>\n<style>.bench-chart{width:100%;margin:1rem 0 2rem}</style>")
 
+nbText: """
+**This page is a living document**: it is rendered from every run committed in
+`bench/results`, so it changes with each new run. What the results mean is in dated
+dev log posts, which keep a snapshot of the charts they discuss:
+[What the first benchmark runs say](../blog/2026-11-06-bench-results.html)
+(6 November 2026, runs of 1 November).
+"""
+
 # the setup section describes every environment's runs together
 for env, t in envSessions:
   for k, v in t: sessions.mgetOrPut(k, @[]).add v
@@ -410,34 +418,6 @@ minimum and maximum. Totals include cell 0. Within an environment, times are sec
 environments, only normalised times and ratios are shown.
 """
 nbText: setup
-
-nbText: """
-## Findings of the first run
-
-From the cloud runs of 1 November 2026 (5 repetitions; s0 rerun that evening with interacting variables; the numbers are in the tables below).
-When later runs are added, check these against them.
-
-- **The Nim frontend is most of the wait.** In nearly every cell the blue part is the largest,
-  in every mode. Speeding up a cell means speeding up semantic checking, more than C.
-- **`nim ic` costs more to start and less per cell.** Cell 0 takes about 4 to 5 s in debug
-  and 6 to 6.5 s in release, against 1.2 s and 2.2 s with `nim c`. After that it is the cheapest
-  per cell: 0.67 s against 0.86 s for integer variables, and 0.9 s against 2.6 s for
-  `std/tables` in release. It overtakes `nim c` after 5 to 12 cells, depending on the scenario.
-- **Hot reload wins when earlier cells are expensive to run.** In s3, re-running costs
-  101 s in debug (93 s with `nim ic`), and hot reload costs 34 s. For cheap cells, hot reload
-  with `nim c` costs about the same per cell as re-running.
-- **Release builds mostly add C compile time.** `std/tables` goes from 29 s to 50 s with
-  `nim c`. Only the heavy computation gains, and in hot reload mode, where it runs once,
-  that gain is cancelled out. Danger is about the same as release.
-- **Arraymancer costs about 6 s per cell**, mostly Nim, in every mode that works. `nim ic`
-  crashes on it (segfault in `nim m`), so the incremental modes fail at cell 1.
-- **`nim ic` with hot reload fails** in every scenario, at the link step of cell 0.
-- **Snappy (under 1 s per cell, cells 11 to 20) only for the simplest cells.** Integer
-  variables get there in every mode, fastest with `nim ic` (0.56 s). Learning `std/tables`
-  comes closest with `nim ic` in debug (1.1 s). The heavy-computation scenario stays at 1.4 s
-  at best (hot reload), and arraymancer at about 7 s.
-- The outputs agree across modes wherever a session completed.
-"""
 
 proc snappyChart(): string =
   ## Mean time per cell over the last 10 cells, per scenario panel, one bar per
