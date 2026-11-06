@@ -24,9 +24,10 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
       - name: Render review page
         run: |
-          mkdir -p _specview
+          mkdir -p _specview/assets
+          cp -r docs/assets/fonts docs/assets/fonts.css _specview/assets/
           nim r --hints:off tools/specview.nim --base:origin/${{ github.base_ref }} \
-            --out:_specview/index.html --md:"$GITHUB_STEP_SUMMARY"
+            --out:_specview/index.html --md:"$GITHUB_STEP_SUMMARY" --assets:assets/
       - uses: actions/upload-artifact@v4
         with:
           name: specview
