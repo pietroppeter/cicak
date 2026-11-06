@@ -53,6 +53,7 @@ Kept up to date as the project changes (the dev log posts below are dated snapsh
 
 ## Dev log
 
+- 2026-11-06 [Faster CI](https://pietroppeter.github.io/cicak/blog/2026-11-06-faster-ci.html): CI from 9 minutes to 1 ([source](docs/blog/faster_ci.nim))
 - 2026-11-06 [What the first benchmark runs say](https://pietroppeter.github.io/cicak/blog/2026-11-06-bench-results.html): reading the first benchmark runs, with snapshots of the charts ([source](docs/blog/bench_results.nim))
 - 2026-11-01 [Cicak, the chirping gecko](https://pietroppeter.github.io/cicak/blog/2026-11-01-cicak.html): why the REPL is called cicak ([source](docs/blog/cicak.nim))
 - 2026-10-31 [A working PoC with Hot Code Reloading and Incremental Compilation](https://pietroppeter.github.io/cicak/blog/2026-10-31-hcr-poc.html) ([source](docs/blog/hcr_poc.nim))
@@ -108,7 +109,7 @@ atlas install
 Tasks are in `config.nims`, so they run with `nim` (no nimble needed):
 
 ```sh
-nim docs       # renders the dev log: posts in docs/blog (running the experiments), then the index
+nim docs       # renders the site in one program (docs/all.nim): posts in docs/blog (running the experiments), the index, the benchmark pages
 nim specview   # renders the OpenSpec review page to specview.html
 ```
 
