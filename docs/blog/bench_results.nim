@@ -42,6 +42,14 @@ the benchmark. This post is a snapshot. It reads the runs of 1 November 2026, on
 session (4 cores, 5 repetitions; s0 was rerun that evening with interacting variables),
 and the charts below are screenshots of the results page as it was on 6 November.
 
+**Where these numbers come from.** All of them were measured in a Claude Code cloud
+sandbox: a virtual machine with 4 cores of an Intel Xeon at 2.8 GHz and 15 GB of memory,
+running Linux, Nim 2.4.0 and gcc 13.3. That is a modest machine, and a shared one. A
+recent laptop, such as an Apple Silicon Mac, may well be several times faster, so the
+absolute seconds here, and especially the "snappy" line at 1 s, are probably pessimistic.
+The relative findings (which phase dominates, when `nim ic` or hot reload pays off) are
+more likely to hold, but that is still to be checked: runs on other machines will tell.
+
 ## The Nim frontend is most of the wait
 
 Each bar is one cell, split into the time spent in the Nim compiler itself (blue), the
@@ -103,7 +111,7 @@ mean over cells 11 to 20. Under 1 s (the dotted line) a REPL feels snappy.
 """
 shot "snappy.png", "Mean time per cell over cells 11 to 20, per scenario, build mode and mode (median over repetitions, whiskers from the fastest to the slowest)."
 nbText: """
-Only the simplest cells get there. Integer variables are under 1 s in every mode, fastest
+On this sandbox, only the simplest cells get there. Integer variables are under 1 s in every mode, fastest
 with `nim ic` (0.56 s). Learning `std/tables` comes closest with `nim ic` in debug (1.1 s).
 The heavy-computation scenario stays at 1.4 s at best (hot reload), and arraymancer at
 about 7 s per cell, mostly in the Nim frontend.
