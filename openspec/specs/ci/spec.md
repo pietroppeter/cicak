@@ -5,14 +5,15 @@ Continuous integration and publishing for the repository (`.github/workflows/ci.
 
 ## Requirements
 
-### Requirement: Nim 2.4 built from source, cached
-CI SHALL build Nim from the `version-2-4` branch, including `nifler`, `nifmake` and
-atlas, and SHALL cache the build by the branch's commit, so it is rebuilt only when the
-branch moves.
+### Requirement: Nim 2.4 from the release tarball, cached
+CI SHALL install Nim from the official linux_x64 tarball of `NIM_VERSION` (2.4.0), which
+ships `nifler`, `nifmake` and atlas, verified by its sha256, and SHALL cache it by that
+sha256, so it is downloaded again only when the tarball changes. Nim is not built from
+source on CI.
 
-#### Scenario: Branch unchanged
-- **WHEN** a push runs CI and `version-2-4` has the same commit as the cached build
-- **THEN** Nim comes from the cache and is not rebuilt
+#### Scenario: Tarball unchanged
+- **WHEN** a push runs CI and the tarball's sha256 matches the cached one
+- **THEN** Nim comes from the cache and nothing is downloaded but the sha256
 
 ### Requirement: Bounded and non-redundant runs
 CI jobs SHALL have time limits, so a hanging experiment cannot hold a runner for hours, and
@@ -35,9 +36,11 @@ CI SHALL NOT run for pushes or pull requests that only change Markdown files, `L
 - **THEN** CI runs, so the dev log is rebuilt
 
 ### Requirement: Dev log
-CI SHALL install dependencies with atlas, render the dev-log posts in `docs/blog` and
-then the index page `docs/index.nim`. On `main`, after this succeeds, it SHALL deploy the
-posts and the index to GitHub Pages, with the index as the site root.
+CI SHALL install dependencies with atlas and render the dev-log posts in `docs/blog`,
+then the index page `docs/index.nim`, then the benchmark pages from the committed
+results, all in one program (`docs/all.nim`, run by `nim docs`), so the site is compiled
+once. On `main`, after this succeeds, it SHALL deploy the posts, the index and the
+benchmark pages to GitHub Pages, with the index as the site root.
 
 #### Scenario: Merge to main
 - **WHEN** a commit lands on `main` and the docs job passes

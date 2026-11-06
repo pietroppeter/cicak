@@ -54,54 +54,51 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  NIM_BRANCH: version-2-4
+  NIM_VERSION: 2.4.0
 
 jobs:
-  # Nim 2.4 is built from source: the 2.4.0 release binaries lack nifler, which
-  # `nim ic` needs. The build (a few minutes) is cached by the branch's commit.
+  # Nim 2.4 from the official linux_x64 tarball, the same as the cloud sessions
+  # (tools/cloud-setup.sh): since its 2026-10-28 rebuild it ships nifler and nifmake,
+  # which `nim ic` needs, so there is no Nim build from source (it took about 7 min,
+  # every time the version-2-4 branch moved). The tarball is cached by its sha256.
   docs:
     runs-on: ubuntu-24.04  # still ships libpcre3, which nimib's markdown renderer needs
-    timeout-minutes: 30  # a cold Nim build takes about 7
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       # actions/cache rejects paths with `..`, so Nim lives in the home directory
-      - run: echo "NIM_DIR=$HOME/nim" >> "$GITHUB_ENV"
       - id: nim-sha
-        run: echo "sha=$(git ls-remote https://github.com/nim-lang/Nim refs/heads/$NIM_BRANCH | cut -f1)" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "NIM_DIR=$HOME/nim" >> "$GITHUB_ENV"
+          url="https://nim-lang.org/download/nim-$NIM_VERSION-linux_x64.tar.xz"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "sha=$(curl -fsSL --retry 3 "$url.sha256" | cut -d' ' -f1)" >> "$GITHUB_OUTPUT"
       - id: nim-cache
         uses: actions/cache@v4
         with:
           path: ${{ env.NIM_DIR }}
-          key: nim-${{ runner.os }}-${{ runner.arch }}-${{ steps.nim-sha.outputs.sha }}
-      - name: Build Nim, nifler, nifmake and atlas
+          key: nim-tarball-${{ runner.os }}-${{ runner.arch }}-${{ steps.nim-sha.outputs.sha }}
+      - name: Install Nim, nifler, nifmake and atlas
         if: steps.nim-cache.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 -b "$NIM_BRANCH" https://github.com/nim-lang/Nim "$NIM_DIR"
-          cd "$NIM_DIR"
-          . config/build_config.txt
-          git clone -q "$nim_csourcesUrl" "$nim_csourcesDir"
-          git -C "$nim_csourcesDir" checkout -q "$nim_csourcesHash"
-          make -C "$nim_csourcesDir" -j"$(nproc)"
-          ./bin/nim c --hints:off --skipUserCfg --skipParentCfg koch
-          ./koch boot -d:release --skipUserCfg --skipParentCfg
-          ./koch atlas --skipUserCfg --skipParentCfg
-          rm -rf "$nim_csourcesDir"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/nim.tar.xz" "${{ steps.nim-sha.outputs.url }}"
+          echo "${{ steps.nim-sha.outputs.sha }}  $RUNNER_TEMP/nim.tar.xz" | sha256sum -c -
+          tar -xJf "$RUNNER_TEMP/nim.tar.xz" -C "$RUNNER_TEMP"
+          mv "$RUNNER_TEMP/nim-$NIM_VERSION" "$NIM_DIR"
+          for tool in nim nifler nifmake atlas; do test -x "$NIM_DIR/bin/$tool"; done
       - run: echo "$NIM_DIR/bin" >> "$GITHUB_PATH"
-      - run: nim -v && ls "$NIM_DIR/bin"
-      # usually preinstalled on the image; apt-get only runs when it isn't
-      - run: dpkg -s libpcre3 > /dev/null 2>&1 || (sudo apt-get update && sudo apt-get install -y libpcre3)
+      # libpcre3 for nimib's markdown renderer, musl for the tarball's nifler and
+      # nifmake (nim and atlas are static); apt-get only runs when one is missing
+      - run: dpkg -s libpcre3 musl > /dev/null 2>&1 || (sudo apt-get update -qq && sudo apt-get install -y -qq libpcre3 musl)
+      - run: nim -v && nifler --version
       - run: atlas install
-      # renders the posts in docs/blog (running the experiments), then the index
-      - name: Render the dev log
+      # The posts in docs/blog (running the experiments), the index and the benchmark
+      # pages (from the committed results in bench/results: nothing is benchmarked
+      # here), in one program: docs/all.nim. Nim's own cache (~/.cache/nim) is not
+      # kept between runs on purpose: the experiments time cold `nim ic` builds.
+      - name: Render the site
         timeout-minutes: 10
         run: nim docs
-      # from the committed results in bench/results: nothing is benchmarked here
-      - name: Render the benchmark pages
-        timeout-minutes: 10
-        run: |
-          nim r --hints:off bench/results.nim
-          nim r --hints:off bench/design.nim
-          nim r --hints:off bench/scenarios_page.nim
       - name: Assemble site
         run: |
           mkdir -p _site/blog _site/bench

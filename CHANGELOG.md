@@ -14,6 +14,7 @@ OpenSpec change is archived. Format based on
   or hot reload) and build mode, with compile time split into Nim, C compile and link,
   a design doc and a results page with nim-plotly charts; not run on CI
 - Experiment `hcr-ic`: why hot code reloading with `nim ic` does not link on Nim 2.4
+- Dev log post "Faster CI": how the site's CI went from about 9 minutes to 1
 
 ### Changed
 - The project is now called cicak: repository, nimble package, README and dev log
@@ -25,6 +26,9 @@ OpenSpec change is archived. Format based on
   hanging experiment now fails the docs build
 - CI: the Nim build cache is saved again (it never was, so every run rebuilt Nim), jobs
   have time limits, new pushes cancel a PR's older run, and the OpenSpec review uses Nim 2.4
+- CI is faster: Nim comes from the 2.4.0 release tarball (cached by its sha256) instead
+  of a ~7 min build from source whenever the `version-2-4` branch moved, and `nim docs`
+  renders the posts, the index and the benchmark pages in one program (`docs/all.nim`)
 
 ### Fixed
 - Nim code on the dev log and benchmark pages is highlighted again: files shown with
