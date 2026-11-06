@@ -3,7 +3,7 @@
 ##
 ##   nim r bench/design.nim
 
-import std/[os, strutils]
+import std/[os, strutils, json]
 import nimib
 import ../docs/theme
 
@@ -25,5 +25,6 @@ nb.useTheme(
   meta = "source: bench/DESIGN.md",
   summary = "Design and decisions of the cicak benchmark.",
 )
+nb.doc.context["home_href"] = %"../"  # the dev log index, one level up on the site
 nbText: md
 nbSave

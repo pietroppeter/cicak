@@ -323,6 +323,7 @@ nb.useTheme(
   meta = (if metas.len > 0: &"""{last["nim"].getStr} · {last["cc"].getStr} · {last["machine"]["cpu"].getStr}, {last["machine"]["cores"].getInt} cores · runs: {metas.mapIt(it["run"].getStr).join(", ")}""" else: "no runs yet"),
   summary = "Compile and run times of the cicak benchmark scenarios in each mode.",
 )
+nb.doc.context["home_href"] = %"../"  # the dev log index, one level up on the site
 nb.doc.context["stylesheet"] = %(nb.doc.context["stylesheet"].getStr & "\n<script src=\"https://cdn.plot.ly/plotly-2.35.2.min.js\"></script>\n<style>.bench-chart{width:100%;margin:1rem 0 2rem}</style>")
 
 # the setup section describes every environment's runs together
@@ -385,12 +386,12 @@ for m in metas:
   if m["args"].to(seq[string]).anyIt(it == "--calibrationOnly"):
     setup.add &"""| {m["run"].getStr} | {m["label"].getStr} | calibration only | – | – | – | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} |""" & "\n"
     continue
-  setup.add &"""| {m["run"].getStr} | {m["label"].getStr} | {argValue(m, "scenarios", "s0,s1,s2,s3").replace(",", ", ")} | {argValue(m, "opts", "debug,release").replace(",", ", ")} | {argValue(m, "modes", "all four").replace(",", ", ")} | {argValue(m, "reps", "5")} | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} |""" & "\n"
+  setup.add &"""| {m["run"].getStr} | {m["label"].getStr} | {toSeq(m["scenarios"].keys).join(", ")} | {argValue(m, "opts", "debug,release").replace(",", ", ")} | {argValue(m, "modes", "all four").replace(",", ", ")} | {argValue(m, "reps", "5")} | {m["machine"]["cpu"].getStr}, {m["machine"]["cores"].getInt} cores, {m["machine"]["memory"].getStr} |""" & "\n"
 setup.add """
 Versions: """ & metas.mapIt(it["nim"].getStr & ", " & it["cc"].getStr).deduplicate.join("; ") & """.
 
 **Environments** are the machines the runs come from (a run's label). Each run starts and ends
-with a **calibration session**, always the same: `c+rerun`, debug, the first 10 cells of s0 and a
+with a **calibration session**, always the same: `c+rerun`, debug, 10 cells of independent integer variables and a
 cell with a fixed computation. Its median, phase by phase, is the environment's **reference**.
 Times from different environments are compared only after dividing each phase by the
 environment's reference for that phase. *Drift* is the calibration at the end of a run against
@@ -413,14 +414,14 @@ nbText: setup
 nbText: """
 ## Findings of the first run
 
-From the cloud run of 1 November 2026 (5 repetitions; the numbers are in the tables below).
+From the cloud runs of 1 November 2026 (5 repetitions; s0 rerun that evening with interacting variables; the numbers are in the tables below).
 When later runs are added, check these against them.
 
 - **The Nim frontend is most of the wait.** In nearly every cell the blue part is the largest,
   in every mode. Speeding up a cell means speeding up semantic checking, more than C.
-- **`nim ic` costs more to start and less per cell.** Cell 0 takes about 3.9 s in debug
-  and 6 s in release, against 1.2 s and 2.2 s with `nim c`. After that it is the cheapest
-  per cell: 0.67 s against 0.89 s for integer variables, and 0.9 s against 2.6 s for
+- **`nim ic` costs more to start and less per cell.** Cell 0 takes about 4 to 5 s in debug
+  and 6 to 6.5 s in release, against 1.2 s and 2.2 s with `nim c`. After that it is the cheapest
+  per cell: 0.67 s against 0.86 s for integer variables, and 0.9 s against 2.6 s for
   `std/tables` in release. It overtakes `nim c` after 5 to 12 cells, depending on the scenario.
 - **Hot reload wins when earlier cells are expensive to run.** In s3, re-running costs
   101 s in debug (93 s with `nim ic`), and hot reload costs 34 s. For cheap cells, hot reload
@@ -432,7 +433,7 @@ When later runs are added, check these against them.
   crashes on it (segfault in `nim m`), so the incremental modes fail at cell 1.
 - **`nim ic` with hot reload fails** in every scenario, at the link step of cell 0.
 - **Snappy (under 1 s per cell, cells 11 to 20) only for the simplest cells.** Integer
-  variables get there in every mode, fastest with `nim ic` (0.54 s). Learning `std/tables`
+  variables get there in every mode, fastest with `nim ic` (0.56 s). Learning `std/tables`
   comes closest with `nim ic` in debug (1.1 s). The heavy-computation scenario stays at 1.4 s
   at best (hot reload), and arraymancer at about 7 s.
 - The outputs agree across modes wherever a session completed.

@@ -45,6 +45,7 @@ nb.useTheme(
   meta = "source: bench/scenarios and bench/scenario.nim",
   summary = "The cells of the cicak benchmark scenarios.",
 )
+nb.doc.context["home_href"] = %"../"  # the dev log index, one level up on the site
 
 var intro = """
 The [results](results.html) and the [design doc](design.html) refer to these scenarios.

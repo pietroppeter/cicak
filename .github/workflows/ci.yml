@@ -1,8 +1,9 @@
 name: CI
 
 # Commits that only touch prose (README, BACKLOG, LICENSE, ...) or OpenSpec
-# planning files (openspec/, .claude/) don't run CI, nor the benchmark (bench/), which
-# runs on chosen machines, never on CI. docs/ does, to rebuild the dev log.
+# planning files (openspec/, .claude/) don't run CI, nor the benchmark code (bench/), which
+# runs on chosen machines, never on CI. CI only renders the benchmark pages from the
+# committed results, so changes to those re-run it. docs/ does, to rebuild the dev log.
 # paths-ignore cannot re-include a path, so this uses paths with negations: the last
 # pattern that matches a file wins.
 on:
@@ -18,6 +19,14 @@ on:
       - "!tools/specview.nim"
       - "!.github/workflows/openspec.yml"
       - "!bench/**"
+      # the benchmark pages are rendered for the site from committed results
+      - "bench/results/**"
+      - "bench/scenarios/**"
+      - "bench/results.nim"
+      - "bench/design.nim"
+      - "bench/scenarios_page.nim"
+      - "bench/scenario.nim"
+      - "bench/DESIGN.md"
   pull_request:
     paths:
       - "**"
@@ -29,6 +38,14 @@ on:
       - "!tools/specview.nim"
       - "!.github/workflows/openspec.yml"
       - "!bench/**"
+      # the benchmark pages are rendered for the site from committed results
+      - "bench/results/**"
+      - "bench/scenarios/**"
+      - "bench/results.nim"
+      - "bench/design.nim"
+      - "bench/scenarios_page.nim"
+      - "bench/scenario.nim"
+      - "bench/DESIGN.md"
   workflow_dispatch:
 
 # A new push to a PR cancels that PR's run still in progress; runs on main always finish.
@@ -78,11 +95,19 @@ jobs:
       - name: Render the dev log
         timeout-minutes: 10
         run: nim docs
+      # from the committed results in bench/results: nothing is benchmarked here
+      - name: Render the benchmark pages
+        timeout-minutes: 10
+        run: |
+          nim r --hints:off bench/results.nim
+          nim r --hints:off bench/design.nim
+          nim r --hints:off bench/scenarios_page.nim
       - name: Assemble site
         run: |
-          mkdir -p _site/blog
+          mkdir -p _site/blog _site/bench
           cp docs/blog/*.html _site/blog/
           cp docs/index.html _site/index.html
+          cp bench/results.html bench/design.html bench/scenarios.html _site/bench/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

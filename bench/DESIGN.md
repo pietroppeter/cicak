@@ -52,6 +52,11 @@ Decisions:
   import every earlier cell, so a second `var x` makes every later use of `x` ambiguous.
   s0 adds a variable in two of every three cells and assigns to an earlier one in the
   third. Redefinition gets its own scenario once cicak handles it (`import cell_K except x`).
+- **s0's variables depend on each other**: each new variable is computed from the latest one
+  (`var x5* = x4 + 5`), and each assignment updates an earlier variable from the latest
+  (`x4 = x4 + x5`), so every cell reads symbols from earlier cells, as in a real session.
+  The first version (until 1 November 2026) used independent variables; its runs were redone,
+  and the calibration session keeps those independent cells so references stay comparable.
 - **s0 runs to 100 cells**, since it is cheap and 20 cells barely show the growth.
   It is generated, so any length works (`--s0cells`).
 - **s1 uses `std/tables`**: generic, so later cells pay for new instantiations. About
@@ -140,7 +145,7 @@ different environments are not comparable: a 2 vCPU VPS is slower than a 4-core 
 not uniformly so. These decisions keep comparisons honest:
 
 - **Every run calibrates itself.** It starts and ends with a calibration session, always the same:
-  `c+rerun`, debug, the first 10 cells of s0, then a cell with a fixed CPU-bound loop (it runs
+  `c+rerun`, debug, 10 cells adding and assigning independent integer variables, then a cell with a fixed CPU-bound loop (it runs
   once, as the last cell). `--calibrationOnly` runs just that, twice, to calibrate an environment
   whose runs predate calibration (as the first cloud runs do).
 - **The reference is per phase.** Machines differ unevenly: C compiles run in parallel, so core
