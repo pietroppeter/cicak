@@ -25,6 +25,12 @@ two), L (more).
   re-run when HCR can't reload (changed types).
 - **Showing values** (S). `>>> x` prints the value and its type: compile the bare
   expression and, when the compiler says it has to be discarded, wrap it in `echo`.
+- **Automatic exports** (S). Each input is a module that imports the earlier ones, and
+  Nim imports are not transitive, so today a cell has to write `export arraymancer` after
+  `import arraymancer` and `x*` for its variables, or later cells can't see them (the
+  benchmark scenarios do this by hand). The engine should add both: an `export` for every
+  module a cell imports, and `*` on its top-level declarations, so a user writes plain Nim.
+  No cost in compile time: the compiler does the same work either way.
 - **HCR together with IC** (L, upstream). Tried 2026-11-01: `nim ic --hotCodeReloading:on`
   fails to link on Nim 2.4; the IC backend does not support HCR (three layers, a
   partial compiler patch and a repro in `experiments/hcr-ic/`). Next step, if it
