@@ -20,6 +20,18 @@ SHALL NOT require editing the index.
 - **WHEN** a post does not set a summary
 - **THEN** the index still lists it, with date and title only
 
+### Requirement: Living documents
+The index SHALL start with a table of the living documents, pages kept up to date as the
+project changes (the benchmark results, design and scenarios pages, the specs, the
+backlog), before the posts, with what each one is and when it is updated. The
+benchmark results entry SHALL show the date of the latest committed run. Living
+documents SHALL NOT carry interpretation that a new run could make stale: that goes in a
+dated post, with screenshots of the charts it discusses, kept next to the post.
+
+#### Scenario: New benchmark run
+- **WHEN** a run is committed in `bench/results` and CI renders the site
+- **THEN** the results page shows it, the index shows its date, and earlier posts still show the charts they discussed
+
 ### Requirement: Navigation
 Every page SHALL link to the GitHub repository at the top, and every post SHALL link
 back to the index.

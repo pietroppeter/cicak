@@ -15,8 +15,13 @@ OpenSpec change is archived. Format based on
   a design doc and a results page with nim-plotly charts; not run on CI
 - Experiment `hcr-ic`: why hot code reloading with `nim ic` does not link on Nim 2.4
 - Dev log post "Faster CI": how the site's CI went from about 9 minutes to 1
+- Dev log post on the first benchmark runs, with snapshots of the charts it discusses
+- Dev log index: a table of living documents (benchmark results, design and scenarios,
+  specs, backlog) above the posts; the README lists them too
 
 ### Changed
+- The benchmark results page no longer carries the findings of the first run: they
+  moved to the dev log post, and the page says it is a living document
 - The project is now called cicak: repository, nimble package, README and dev log
 - Dev log: every page links to the repository, posts link back to the index, and the
   index is a table of posts with date, title and summary

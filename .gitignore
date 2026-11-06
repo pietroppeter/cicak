@@ -4,6 +4,8 @@ nimcache/
 # rendered dev log
 /docs/**/*.html
 /docs/**/*.png
+# ...but a post's screenshots are committed: they are snapshots, not rendered
+!/docs/blog/bench-results/*.png
 /specview.html
 # experiment build artifacts
 experiments/hcr-cells/host
