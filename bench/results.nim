@@ -149,7 +149,7 @@ proc modesIn(scenario, opt: string): seq[string] =
 
 var chartCount = 0
 proc chart(traces: seq[JsonNode], layout: JsonNode, height = 380, legendY = -0.18): string =
-  ## A plotly chart as HTML; plotly.js comes from cdn.plot.ly (loaded once, in the head).
+  ## A plotly chart as HTML; plotly.js is vendored in docs/assets (loaded once, in the head).
   inc chartCount
   let id = "chart" & $chartCount
   var lay = layout
@@ -324,7 +324,7 @@ nb.useTheme(
   summary = "Compile and run times of the cicak benchmark scenarios in each mode.",
 )
 nb.doc.context["home_href"] = %"../"  # the dev log index, one level up on the site
-nb.doc.context["stylesheet"] = %(nb.doc.context["stylesheet"].getStr & "\n<script src=\"https://cdn.plot.ly/plotly-2.35.2.min.js\"></script>\n<style>.bench-chart{width:100%;margin:1rem 0 2rem}</style>")
+nb.doc.context["stylesheet"] = %(nb.doc.context["stylesheet"].getStr & "\n<script src=\"" & nb.assetsHref & "plotly/plotly-2.35.2.min.js\"></script>\n<style>.bench-chart{width:100%;margin:1rem 0 2rem}</style>")
 
 # the setup section describes every environment's runs together
 for env, t in envSessions:

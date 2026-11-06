@@ -25,3 +25,11 @@ OpenSpec change is archived. Format based on
   hanging experiment now fails the docs build
 - CI: the Nim build cache is saved again (it never was, so every run rebuilt Nim), jobs
   have time limits, new pushes cancel a PR's older run, and the OpenSpec review uses Nim 2.4
+
+### Fixed
+- Nim code on the dev log and benchmark pages is highlighted again: files shown with
+  `nbFile` and ```` ```nim ```` fences were left plain; all Nim code is now highlighted
+  when the page is built, without highlight.js
+- The dev log, benchmark and OpenSpec review pages load nothing from a CDN: fonts, highlight.js (for
+  shell snippets) and plotly.js are vendored in `docs/assets` by
+  `tools/vendor-assets.sh` and served from the site

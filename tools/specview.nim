@@ -664,7 +664,7 @@ proc renderMarkdown(changes: seq[Change], base: string, files: seq[string]): str
 
 proc main() =
   var root = getCurrentDir()
-  var base, outPath, mdPath = ""
+  var base, outPath, mdPath, assets = ""
   outPath = "specview.html"
   for kind, key, val in getopt():
     case kind
@@ -674,12 +674,17 @@ proc main() =
       of "out": outPath = val
       of "md": mdPath = val
       of "root": root = val
+      of "assets": assets = val
       of "help", "h":
-        echo "usage: specview [--root:DIR] [--base:GIT_REF] [--out:FILE.html] [--md:FILE.md]"; quit 0
+        echo "usage: specview [--root:DIR] [--base:GIT_REF] [--out:FILE.html] [--md:FILE.md] [--assets:DIR]"; quit 0
       else: quit "unknown option --" & key
     else: discard
   root = root.absolutePath
   if not dirExists(root / "openspec"): quit "no openspec/ directory in " & root
+  # the vendored fonts (docs/assets/fonts.css): by default linked where they are in
+  # the repository, relative to the page; --assets names a copy shipped with it
+  if assets.len == 0:
+    assets = relativePath(root / "docs" / "assets", outPath.absolutePath.parentDir, '/') & "/"
 
   let backlog = backlogEntries(readOr(root / "BACKLOG.md"))
   var changes: seq[Change]
@@ -703,7 +708,7 @@ proc main() =
   head = head.strip
   var html = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" &
     "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>OpenSpec review</title>" &
-    "<link rel=\"stylesheet\" href=\"https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=JetBrains+Mono:wght@400;600&display=swap\">" &
+    "<link rel=\"stylesheet\" href=\"" & assets & "fonts.css\">" &
     "<style>" & css & "</style></head><body>"
   html.add "<header class=\"mast\"><span class=\"eyebrow\">" & esc(root.lastPathPart) &
     " · OpenSpec review</span><h1>Where the changes stand</h1><div class=\"meta\">" & esc(head) &
