@@ -30,3 +30,6 @@ OpenSpec change is archived. Format based on
 - Nim code on the dev log and benchmark pages is highlighted again: files shown with
   `nbFile` and ```` ```nim ```` fences were left plain; all Nim code is now highlighted
   when the page is built, without highlight.js
+- The dev log and benchmark pages load nothing from a CDN: fonts, highlight.js (for
+  shell snippets) and plotly.js are vendored in `docs/assets` by
+  `tools/vendor-assets.sh` and served from the site

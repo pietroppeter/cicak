@@ -1,6 +1,7 @@
 ## The dev-log theme: the nanuq theme (github.com/pietroppeter/nanuq) with a
-## green palette, light and dark, self-contained apart from Google Fonts and
-## highlight.js for shell snippets. Nim code is highlighted when the page is
+## green palette, light and dark. Nothing loads from a CDN: fonts and highlight.js
+## (for shell snippets) are vendored in docs/assets (see tools/vendor-assets.sh),
+## which the site serves at /assets. Nim code is highlighted when the page is
 ## built, with nimib's own highlighter: code that ran, files shown with nbFile
 ## and ```nim fences in markdown alike, so it needs no script to look right.
 ##
@@ -15,9 +16,6 @@ const
   repoUrl* = "https://github.com/pietroppeter/cicak"
 
 const themeHead = """
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@500;700&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=JetBrains+Mono:wght@400;600&display=swap">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2280%22>🌱</text></svg>">
 <style>
 /* Layout: one reading column on a pale green ground; code and output read as a notebook cell pair. */
@@ -146,14 +144,19 @@ footer .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--
 """
 
 const themeScripts = """
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
+<script src="$1hljs/highlight.min.js"></script>
+<script src="$1hljs/bash.min.js"></script>
 <script>
   if (window.hljs) document.querySelectorAll("code.language-sh").forEach(el => {
     try { hljs.highlightElement(el); } catch (e) {}
   });
 </script>
 """
+
+func assetsHref*(nb: Nb): string =
+  ## The relative link to docs/assets: pages in blog/ and bench/ are one level
+  ## below the site root (and the repository root links `assets` to docs/assets).
+  if nb.doc.filename.parentDir.lastPathPart in ["blog", "bench"]: "../assets/" else: "assets/"
 
 func themeHeader(blk: JsonNode, nb: Nb): string =
   let c = nb.doc.context
@@ -177,7 +180,7 @@ func themeFooter(blk: JsonNode, nb: Nb): string =
     "</code></pre></details>\n") &
   """<div class="foot">Made with <a href="https://github.com/pietroppeter/nimib">nimib</a>.
 Blocks marked "nim · ran" were executed when this page was built.
-Source: <a href="""" & repoUrl & """">""" & projectName & """</a>.</div></footer>""" & themeScripts
+Source: <a href="""" & repoUrl & """">""" & projectName & """</a>.</div></footer>""" & (themeScripts % nb.assetsHref)
 
 func emptyPartial(blk: JsonNode, nb: Nb): string = ""
 
@@ -226,7 +229,8 @@ proc useTheme*(nb: var Nb, titleHtml, eyebrow, epigraph, meta: string, summary =
   let description =
     if summary.len > 0: "<meta name=\"description\" content=\"" & escapeAttr(summary) & "\">\n"
     else: ""
-  nb.doc.context["stylesheet"] = %(description & themeHead)
+  let fonts = "<link rel=\"stylesheet\" href=\"" & nb.assetsHref & "fonts.css\">\n"
+  nb.doc.context["stylesheet"] = %(description & fonts & themeHead)
   nb.doc.context["highlight"] = %""
   nb.doc.context["nb_style"] = %""
   nb.doc.context["disableHighlightJs"] = %true
