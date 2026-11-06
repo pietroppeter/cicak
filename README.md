@@ -94,7 +94,7 @@ atlas install
 Tasks are in `config.nims`, so they run with `nim` (no nimble needed):
 
 ```sh
-nim docs       # renders the dev log: posts in docs/blog (running the experiments), then the index
+nim docs       # renders the site in one program (docs/all.nim): posts in docs/blog (running the experiments), the index, the benchmark pages
 nim specview   # renders the OpenSpec review page to specview.html
 ```
 
