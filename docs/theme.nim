@@ -1,11 +1,13 @@
 ## The dev-log theme: the nanuq theme (github.com/pietroppeter/nanuq) with a
 ## green palette, light and dark, self-contained apart from Google Fonts and
-## highlight.js for shell snippets.
+## highlight.js for shell snippets. Nim code is highlighted when the page is
+## built, with nimib's own highlighter: code that ran, files shown with nbFile
+## and ```nim fences in markdown alike, so it needs no script to look right.
 ##
 ## Usage, right after `nbInit`:
 ##   nb.useTheme(titleHtml = "...", eyebrow = "...", epigraph = "...", meta = "...")
 
-import std/[json, os, strformat]
+import std/[json, os, strformat, strutils]
 import nimib
 
 const
@@ -146,9 +148,8 @@ footer .foot { margin-top: 3rem; padding-top: 1rem; border-top: 1px solid var(--
 const themeScripts = """
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/bash.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/nim.min.js"></script>
 <script>
-  if (window.hljs) document.querySelectorAll("code.language-sh, code.language-nim").forEach(el => {
+  if (window.hljs) document.querySelectorAll("code.language-sh").forEach(el => {
     try { hljs.highlightElement(el); } catch (e) {}
   });
 </script>
@@ -180,6 +181,36 @@ Source: <a href="""" & repoUrl & """">""" & projectName & """</a>.</div></footer
 
 func emptyPartial(blk: JsonNode, nb: Nb): string = ""
 
+func nimCodeHtml*(code: string): string =
+  ## A Nim code block, highlighted now. `nohighlight` keeps highlight.js off it.
+  """<pre><code class="nohighlight language-nim">""" & highlightNim(code) & "</code></pre>"
+
+func unescapeHtml(s: string): string =
+  s.multiReplace(("&lt;", "<"), ("&gt;", ">"), ("&quot;", "\""), ("&#39;", "'"), ("&amp;", "&"))
+
+func highlightNimFences(html: string): string =
+  ## Replaces the markdown renderer's ```nim blocks with highlighted ones.
+  const openTag = """<pre><code class="language-nim">"""
+  const close = "</code></pre>"
+  var i = 0
+  while true:
+    let a = html.find(openTag, i)
+    if a < 0: break
+    let b = html.find(close, a + openTag.len)
+    if b < 0: break
+    result.add html[i ..< a]
+    result.add nimCodeHtml(unescapeHtml(html[a + openTag.len ..< b]).strip(leading = false, chars = {'\n'}))
+    i = b + close.len
+  result.add html[i .. ^1]
+
+func themeText(blk: JsonNode, nb: Nb): string =
+  highlightNimFences(markdownToHtml(blk{"text"}.getStr))
+
+func themeFile(blk: JsonNode, nb: Nb): string =
+  let (filename, ext, content) = (blk{"filename"}.getStr, blk{"ext"}.getStr, blk{"content"}.getStr)
+  "<pre>" & filename & "</pre>\n" &
+    (if ext == "nim": nimCodeHtml(content) else: preCodeTag(lang = ext, code = content))
+
 proc escapeAttr(s: string): string =
   for c in s:
     case c
@@ -207,5 +238,7 @@ proc useTheme*(nb: var Nb, titleHtml, eyebrow, epigraph, meta: string, summary =
   nb.doc.context["home_href"] = %(if nb.doc.filename.parentDir.lastPathPart == "blog": "../" else: "")
   nb.backend.partials["header"] = themeHeader
   nb.backend.partials["footer"] = themeFooter
+  nb.backend.partials["nbText"] = themeText
+  nb.backend.partials["nbFile"] = themeFile
   nb.backend.partials["left"] = emptyPartial
   nb.backend.partials["right"] = emptyPartial
