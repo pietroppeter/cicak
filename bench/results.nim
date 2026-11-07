@@ -57,9 +57,15 @@ for d in runDirs:
   for id, s in meta["scenarios"]:
     titles[id] = s["title"].getStr
     cellTitles[id] = s["cellTitles"].to(seq[string])
+  # a run killed before its end: only its complete repetitions (and the first calibration)
+  let repsDone = (if meta.hasKey("finished") or not meta.hasKey("repsDone"): int.high
+                  else: meta["repsDone"].getInt)
+  proc partial(r: JsonNode): bool =
+    r["rep"].getInt > repsDone and not (r["scenario"].getStr == "cal" and r["rep"].getInt == 1)
   var bySession: OrderedTable[(Key, int), Session]
   for line in lines(d / "steps.jsonl"):
     let r = parseJson(line)
+    if partial(r): continue
     let k: Key = (r["scenario"].getStr, r["opt"].getStr, r["mode"].getStr)
     let sk = (k, r["rep"].getInt)
     if sk notin bySession: bySession[sk] = Session(failedAt: -1)
@@ -72,6 +78,7 @@ for d in runDirs:
     s.cells[c][phRun] += r["runMs"].getFloat
   for line in lines(d / "cells.jsonl"):
     let r = parseJson(line)
+    if partial(r): continue
     let k: Key = (r["scenario"].getStr, r["opt"].getStr, r["mode"].getStr)
     let sk = (k, r["rep"].getInt)
     if sk notin bySession: bySession[sk] = Session(failedAt: -1)
