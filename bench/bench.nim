@@ -17,6 +17,8 @@
 ##   --calibrationOnly        only the calibration session, twice (an environment's reference)
 ##
 ## Writes <out>/<run id>/{meta.json,steps.jsonl,cells.jsonl}. Not run on CI.
+## The jsonl files grow row by row and meta.json is rewritten after every repetition
+## ("repsDone"), so a run that is killed keeps its complete repetitions.
 
 import std/[os, osproc, parseopt, strutils, sequtils, json, times, monotimes, tables, streams]
 import engine, scenario
@@ -118,6 +120,8 @@ proc main() =
   for o in opts:
     let (ok, ms, log) = buildRtl(cfg0, work, parseEnum[Opt](o))
     meta["rtl"][o] = %*{"ok": ok, "ms": ms, "log": log}
+  meta["repsDone"] = %0
+  writeFile(dir / "meta.json", meta.pretty)
 
   let steps = newFileStream(dir / "steps.jsonl", fmWrite)
   let cellsOut = newFileStream(dir / "cells.jsonl", fmWrite)
@@ -184,6 +188,8 @@ proc main() =
         for m in modes:
           inc n
           runOne(id, sc[id], parseMode(m), parseEnum[Opt](o), rep, "[" & $n & "/" & $total & "]")
+    meta["repsDone"] = %rep
+    writeFile(dir / "meta.json", meta.pretty)
   runOne("cal", cal, parseMode("c+rerun"), optDebug, 2, "[calibration]")
   steps.close
   cellsOut.close
