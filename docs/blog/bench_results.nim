@@ -42,19 +42,11 @@ the benchmark. This post is a snapshot. It reads the runs of 1 November 2026, on
 session (4 cores, 5 repetitions; s0 was rerun that evening with interacting variables),
 and the charts below are screenshots of the results page as it was on 6 November.
 
-**Where these numbers come from.** All of them were measured in a Claude Code cloud
-sandbox: a virtual machine with 4 cores of an Intel Xeon at 2.8 GHz and 15 GB of memory,
-running Linux, Nim 2.4.0 and gcc 13.3. That is a modest machine, and a shared one. A
-recent laptop, such as an Apple Silicon Mac, may well be several times faster, so the
-absolute seconds here, and especially the "snappy" line at 1 s, are probably pessimistic.
-The relative findings (which phase dominates, when `nim ic` or hot reload pays off) are
-more likely to hold, but that is still to be checked: runs on other machines will tell.
-
-## The Nim frontend is most of the wait
-
-Each bar is one cell, split into the time spent in the Nim compiler itself (blue), the
-C compiler, the link and running the program or reloading the cell. Here is learning
-`std/tables` in debug:
+**Where these numbers come from.** All the charts below were measured in a Claude Code
+cloud sandbox: a virtual machine with 4 cores of an Intel Xeon at 2.8 GHz and 15 GB of
+memory, running Linux, Nim 2.4.0 and gcc 13.3. We guessed that a laptop would be several
+times faster, so we ran the benchmark on a Mac (an M3 Pro) to check. It is only partly
+true: the section "On a Mac", at the end, says what changes.
 """
 shot "s1-phases-debug.png", "s1, learning std/tables, debug: time per cell by phase, for each mode that works (nim ic with hot reload fails)."
 
@@ -111,7 +103,7 @@ mean over cells 11 to 20. Under 1 s (the dotted line) a REPL feels snappy.
 """
 shot "snappy.png", "Mean time per cell over cells 11 to 20, per scenario, build mode and mode (median over repetitions, whiskers from the fastest to the slowest)."
 nbText: """
-On this sandbox, only the simplest cells get there. Integer variables are under 1 s in every mode, fastest
+In the sandbox, only the simplest cells get there. Integer variables are under 1 s in every mode, fastest
 with `nim ic` (0.56 s). Learning `std/tables` comes closest with `nim ic` in debug (1.1 s).
 The heavy-computation scenario stays at 1.4 s at best (hot reload), and arraymancer at
 about 7 s per cell, mostly in the Nim frontend.
@@ -123,6 +115,30 @@ about 7 s per cell, mostly in the Nim frontend.
 - `nim ic` with hot reload fails in every scenario, at the link step of cell 0. It stays in
   the benchmark, so the results will show when it starts working.
 - Where a session completed, the outputs agree across modes.
+
+## On a Mac
+
+A second environment, an Apple M3 Pro laptop (run on 6 November, 2 to 3 repetitions;
+the [results page](../bench/results.html) has it as the `mac` environment), changes the
+picture less than we expected. The Mac's calibration is about 2.5 times faster than the
+sandbox's, and heavy cells do run about twice as fast: arraymancer re-runs in 2.7 s per
+cell instead of 6.0 s, and the heavy computation re-runs in 2.7 s instead of 5.1 s in
+debug.
+
+Small cells, though, are *slower* on the Mac. For integer variables, `nim c` with re-run
+takes 0.99 s per cell (0.86 s in the sandbox), `nim ic` with re-run 1.14 s (0.66 s), and
+`nim c` with hot reload 1.22 s (0.83 s). The reason is outside the compiler: starting a
+freshly linked binary costs about 150 ms on macOS against 6 ms on the Linux sandbox, a
+hot reload costs 300 to 600 ms against 6 to 25 ms, and the hot reload host takes about
+4 s to start against 20 ms. For cheap cells that fixed cost is most of the wait, so the
+advantages of `nim ic` and hot reload on integer variables disappear on the Mac, and the
+1 s target is no easier to reach there. Which modes work and which fail is the same on
+both machines. (The Mac run has no split between C compile and link: the compiler
+wrapper times them with `date +%N`, which macOS does not support.)
+
+So the findings above hold for where the time goes in the compiler, but on macOS the cost
+of starting and reloading binaries matters as much, and a REPL there has to keep it out of
+the loop.
 
 ## What next
 
